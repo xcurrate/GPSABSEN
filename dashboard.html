@@ -321,32 +321,38 @@
       updateAttendanceUI();
     }
 
-    function updateAttendanceUI() {
-      const badge = document.getElementById('todayStatusBadge');
-      const btnAbsen = document.getElementById('btnAbsen');
-      const btnPulang = document.getElementById('btnPulang');
+function updateAttendanceUI() {
+  const badge = document.getElementById('todayStatusBadge');
+  const btnAbsen = document.getElementById('btnAbsen');
+  const btnPulang = document.getElementById('btnPulang');
 
-      if (todayAttendance) {
-        document.getElementById('checkInTime').textContent =
-          todayAttendance.check_in_time ? formatTime(todayAttendance.check_in_time) : '—';
-        document.getElementById('checkOutTime').textContent =
-          todayAttendance.check_out_time ? formatTime(todayAttendance.check_out_time) : '—';
+  if (todayAttendance) {
+    document.getElementById('checkInTime').textContent =
+      todayAttendance.check_in_time ? formatTime(todayAttendance.check_in_time) : '—';
+    document.getElementById('checkOutTime').textContent =
+      todayAttendance.check_out_time ? formatTime(todayAttendance.check_out_time) : '—';
 
-        badge.className = 'px-2 py-0.5 rounded-full text-xs font-semibold status-badge-hadir';
-        badge.textContent = 'Sudah Hadir';
+    badge.className = 'px-2 py-0.5 rounded-full text-xs font-semibold status-badge-hadir';
+    badge.textContent = 'Sudah Hadir';
 
-        if (todayAttendance.check_in_time) {
-          btnAbsen.disabled = true;
-          btnAbsen.querySelector('span').textContent = 'Sudah Absen';
-        }
-        if (todayAttendance.check_out_time) {
-          btnPulang.disabled = true;
-          btnPulang.querySelector('span').textContent = 'Sudah Pulang';
-        } else if (todayAttendance.check_in_time) {
-          // Can check out
-        }
-      }
+    if (todayAttendance.check_in_time) {
+      btnAbsen.disabled = true;
+      // Gunakan safe operator/pengecekan if agar tidak error jika span hilang
+      const spanAbsen = btnAbsen.querySelector('span');
+      if (spanAbsen) spanAbsen.textContent = 'Sudah Absen';
     }
+    
+    if (todayAttendance.check_out_time) {
+      btnPulang.disabled = true;
+      // Gunakan pengecekan if untuk span pulang
+      const spanPulang = btnPulang.querySelector('span');
+      if (spanPulang) spanPulang.textContent = 'Sudah Pulang';
+    } else if (todayAttendance.check_in_time) {
+      // Can check out
+    }
+  }
+}
+
 
     async function loadAgenda() {
       const today = getTodayStr();
