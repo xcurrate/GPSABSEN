@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Dashboard Guru — Absensi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: #f0fdf4; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+    .nav-bar {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky; top: 0; z-index: 40;
+    }
+    .btn-absen {
+      background: linear-gradient(135deg, #10b981, #059669);
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    .btn-absen:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+    .btn-absen:disabled { background: linear-gradient(135deg, #94a3b8, #64748b); box-shadow: none; }
+    .btn-pulang {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+    .btn-pulang:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+    }
+    .btn-pulang:disabled { background: linear-gradient(135deg, #94a3b8, #64748b); box-shadow: none; }
+    .status-badge-hadir { background: #d1fae5; color: #065f46; }
+    .status-badge-alfa { background: #fee2e2; color: #991b1b; }
+    .pulse-dot {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .agenda-chip {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border-left: 3px solid #3b82f6;
+    }
+    .rapat-chip {
+      background: linear-gradient(135deg, #fdf4ff, #f3e8ff);
+      border-left: 3px solid #a855f7;
+    }
+    .libur-chip {
+      background: linear-gradient(135deg, #fff7ed, #ffedd5);
+      border-left: 3px solid #f97316;
+    }
+    .kegiatan-chip {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border-left: 3px solid #22c55e;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .slide-up { animation: slideUp 0.4s ease forwards; }
+    #gpsStatus { transition: all 0.3s; }
+  </style>
+</head>
+<body>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg opacity-0 transition-all duration-300"></div>
+
+  <!-- Navbar -->
+  <div class="nav-bar px-4 py-3">
+    <div class="flex items-center justify-between max-w-md mx-auto">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 leading-none">Dashboard</p>
+          <p id="schoolName" class="text-sm font-semibold text-slate-800 leading-tight">Memuat...</p>
+        </div>
+      </div>
+      <button id="logoutBtn"
+        class="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-500 transition-colors bg-slate-100 hover:bg-red-50 px-3 py-2 rounded-xl">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Keluar
+      </button>
+    </div>
+  </div>
+
+  <div class="max-w-md mx-auto px-4 pb-8 pt-4 space-y-4">
+
+    <!-- Greeting + Date -->
+    <div class="slide-up">
+      <div class="flex items-center justify-between mb-1">
+        <p id="greeting" class="text-slate-500 text-sm">Selamat datang 👋</p>
+        <div class="flex items-center gap-1.5">
+          <span class="pulse-dot w-2 h-2 bg-emerald-500 rounded-full inline-block"></span>
+          <span id="liveClock" class="text-xs font-mono text-slate-500"></span>
+        </div>
+      </div>
+      <h1 id="userName" class="text-xl font-bold text-slate-800">Memuat...</h1>
+      <p id="todayDate" class="text-sm text-slate-500 mt-0.5"></p>
+    </div>
+
+    <!-- Status Absensi Hari Ini -->
+    <div class="card p-4 slide-up">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status Hari Ini</p>
+        <div id="todayStatusBadge" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+          Belum Absen
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-slate-50 rounded-xl p-3">
+          <p class="text-xs text-slate-400 mb-1">Jam Masuk</p>
+          <p id="checkInTime" class="text-xl font-bold text-slate-700">—</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3">
+          <p class="text-xs text-slate-400 mb-1">Jam Pulang</p>
+          <p id="checkOutTime" class="text-xl font-bold text-slate-700">—</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GPS Status -->
+    <div id="gpsStatus" class="card p-4 slide-up">
+      <div class="flex items-start gap-3">
+        <div id="gpsIcon" class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p id="gpsLabel" class="text-sm font-semibold text-slate-700">Mendeteksi Lokasi...</p>
+          <p id="gpsDetail" class="text-xs text-slate-400 mt-0.5">Mohon aktifkan GPS di perangkat Anda</p>
+          <div id="distanceBar" class="hidden mt-2">
+            <div class="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Jarak ke sekolah</span>
+              <span id="distanceText">— m</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2">
+              <div id="distanceFill" class="h-2 rounded-full transition-all duration-500 bg-emerald-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tombol Absensi -->
+    <div class="grid grid-cols-2 gap-3 slide-up">
+      <button id="btnAbsen"
+        class="btn-absen text-white py-4 rounded-2xl font-semibold text-sm disabled:cursor-not-allowed flex flex-col items-center gap-1"
+        disabled>
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>Absen Masuk</span>
+      </button>
+      <button id="btnPulang"
+        class="btn-pulang text-white py-4 rounded-2xl font-semibold text-sm disabled:cursor-not-allowed flex flex-col items-center gap-1"
+        disabled>
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        <span>Absen Pulang</span>
+      </button>
+    </div>
+
+    <!-- Agenda Hari Ini -->
+    <div class="card p-4 slide-up">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Agenda Hari Ini</p>
+        <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <div id="agendaList">
+        <p class="text-sm text-slate-400 text-center py-3">Memuat agenda...</p>
+      </div>
+    </div>
+
+    <!-- Riwayat Absensi (7 hari terakhir) -->
+    <div class="card p-4 slide-up">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Riwayat 7 Hari</p>
+        <a href="rekap.html" class="text-xs text-emerald-600 font-medium hover:underline">Lihat Semua →</a>
+      </div>
+      <div id="historyList" class="space-y-2">
+        <div class="h-10 bg-slate-50 rounded-xl animate-pulse"></div>
+        <div class="h-10 bg-slate-50 rounded-xl animate-pulse"></div>
+        <div class="h-10 bg-slate-50 rounded-xl animate-pulse"></div>
+      </div>
+    </div>
+
+    <!-- Statistik Bulan Ini -->
+    <div class="card p-4 slide-up">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Statistik Bulan Ini</p>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="text-center bg-emerald-50 rounded-xl p-3">
+          <p id="statHadir" class="text-2xl font-bold text-emerald-600">—</p>
+          <p class="text-xs text-emerald-500 mt-0.5">Hadir</p>
+        </div>
+        <div class="text-center bg-amber-50 rounded-xl p-3">
+          <p id="statIzin" class="text-2xl font-bold text-amber-600">—</p>
+          <p class="text-xs text-amber-500 mt-0.5">Izin/Sakit</p>
+        </div>
+        <div class="text-center bg-red-50 rounded-xl p-3">
+          <p id="statAlfa" class="text-2xl font-bold text-red-500">—</p>
+          <p class="text-xs text-red-400 mt-0.5">Alfa</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    let currentUser = null;
+    let currentProfile = null;
+    let schoolSettings = {};
+    let userLocation = null;
+    let todayAttendance = null;
+
+    // Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveClock').textContent =
+        now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Greeting
+    function getGreeting() {
+      const h = new Date().getHours();
+      if (h < 11) return 'Selamat Pagi 🌤️';
+      if (h < 15) return 'Selamat Siang ☀️';
+      if (h < 18) return 'Selamat Sore 🌇';
+      return 'Selamat Malam 🌙';
+    }
+
+    // Init page
+    async function init() {
+      const user = await requireAuth('index.html');
+      if (!user) return;
+
+      currentUser = user;
+      currentProfile = await getUserProfile(user.id);
+
+      if (!currentProfile) {
+        await sb.auth.signOut();
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Redirect admin
+      if (currentProfile.role === 'admin') {
+        window.location.href = 'admin.html';
+        return;
+      }
+
+      // Set UI
+      document.getElementById('greeting').textContent = getGreeting();
+      document.getElementById('userName').textContent = currentProfile.full_name;
+
+      const today = new Date();
+      document.getElementById('todayDate').textContent = today.toLocaleDateString('id-ID', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      // Load data parallel
+      await Promise.all([
+        loadSettings(),
+        loadTodayAttendance(),
+        loadAgenda(),
+        loadHistory(),
+        loadStats()
+      ]);
+
+      startGPS();
+    }
+
+    async function loadSettings() {
+      const { data } = await sb.from('settings').select('key, value');
+      if (data) {
+        data.forEach(s => { schoolSettings[s.key] = s.value; });
+        document.getElementById('schoolName').textContent = schoolSettings.school_name || 'Sekolah';
+      }
+    }
+
+    async function loadTodayAttendance() {
+      const today = getTodayStr();
+      const { data } = await sb.from('attendance')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('date', today)
+        .single();
+
+      todayAttendance = data;
+      updateAttendanceUI();
+    }
+
+    function updateAttendanceUI() {
+      const badge = document.getElementById('todayStatusBadge');
+      const btnAbsen = document.getElementById('btnAbsen');
+      const btnPulang = document.getElementById('btnPulang');
+
+      if (todayAttendance) {
+        document.getElementById('checkInTime').textContent =
+          todayAttendance.check_in_time ? formatTime(todayAttendance.check_in_time) : '—';
+        document.getElementById('checkOutTime').textContent =
+          todayAttendance.check_out_time ? formatTime(todayAttendance.check_out_time) : '—';
+
+        badge.className = 'px-2 py-0.5 rounded-full text-xs font-semibold status-badge-hadir';
+        badge.textContent = 'Sudah Hadir';
+
+        if (todayAttendance.check_in_time) {
+          btnAbsen.disabled = true;
+          btnAbsen.querySelector('span').textContent = 'Sudah Absen';
+        }
+        if (todayAttendance.check_out_time) {
+          btnPulang.disabled = true;
+          btnPulang.querySelector('span').textContent = 'Sudah Pulang';
+        } else if (todayAttendance.check_in_time) {
+          // Can check out
+        }
+      }
+    }
+
+    async function loadAgenda() {
+      const today = getTodayStr();
+      const { data } = await sb.from('schedules')
+        .select('*')
+        .eq('event_date', today)
+        .eq('is_public', true)
+        .order('start_time');
+
+      const container = document.getElementById('agendaList');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p class="text-sm text-slate-400 text-center py-2">Tidak ada agenda hari ini</p>';
+        return;
+      }
+
+      const typeClass = { agenda: 'agenda-chip', rapat: 'rapat-chip', libur: 'libur-chip', kegiatan: 'kegiatan-chip' };
+      const typeLabel = { agenda: '📋 Agenda', rapat: '👥 Rapat', libur: '🏖️ Libur', kegiatan: '🎯 Kegiatan' };
+
+      container.innerHTML = data.map(item => `
+        <div class="${typeClass[item.event_type] || 'agenda-chip'} rounded-xl p-3 mb-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="text-sm font-semibold text-slate-700">${item.title}</p>
+              ${item.description ? `<p class="text-xs text-slate-500 mt-0.5">${item.description}</p>` : ''}
+            </div>
+            <span class="text-xs text-slate-500 whitespace-nowrap">
+              ${item.start_time ? formatTime(item.start_time) : ''}
+              ${item.end_time ? '–' + formatTime(item.end_time) : ''}
+            </span>
+          </div>
+          <span class="text-xs font-medium text-slate-400 mt-1 inline-block">${typeLabel[item.event_type] || 'Agenda'}</span>
+        </div>
+      `).join('');
+    }
+
+    async function loadHistory() {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      const fromDate = sevenDaysAgo.toISOString().split('T')[0];
+      const today = getTodayStr();
+
+      const { data } = await sb.from('attendance')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .gte('date', fromDate)
+        .lte('date', today)
+        .order('date', { ascending: false });
+
+      const container = document.getElementById('historyList');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p class="text-sm text-slate-400 text-center py-2">Belum ada riwayat absensi</p>';
+        return;
+      }
+
+      const statusColor = { hadir: 'bg-emerald-100 text-emerald-700', izin: 'bg-blue-100 text-blue-700', sakit: 'bg-amber-100 text-amber-700', alfa: 'bg-red-100 text-red-700' };
+
+      container.innerHTML = data.map(item => `
+        <div class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
+          <div>
+            <p class="text-xs font-semibold text-slate-700">${formatDate(item.date)}</p>
+            <p class="text-xs text-slate-400">
+              ${item.check_in_time ? formatTime(item.check_in_time) : '—'}
+              ${item.check_out_time ? ' → ' + formatTime(item.check_out_time) : ''}
+            </p>
+          </div>
+          <span class="text-xs px-2 py-1 rounded-lg font-medium ${statusColor[item.status] || 'bg-slate-100 text-slate-600'}">
+            ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+          </span>
+        </div>
+      `).join('');
+    }
+
+    async function loadStats() {
+      const now = new Date();
+      const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+      const { data } = await sb.from('attendance')
+        .select('status')
+        .eq('user_id', currentUser.id)
+        .gte('date', firstDay)
+        .lte('date', lastDay);
+
+      if (data) {
+        const hadir = data.filter(d => d.status === 'hadir').length;
+        const izin = data.filter(d => d.status === 'izin' || d.status === 'sakit').length;
+        const alfa = data.filter(d => d.status === 'alfa').length;
+        document.getElementById('statHadir').textContent = hadir;
+        document.getElementById('statIzin').textContent = izin;
+        document.getElementById('statAlfa').textContent = alfa;
+      }
+    }
+
+    // GPS Location
+    function startGPS() {
+      const gpsLabel = document.getElementById('gpsLabel');
+      const gpsDetail = document.getElementById('gpsDetail');
+      const gpsIcon = document.getElementById('gpsIcon');
+
+      if (!navigator.geolocation) {
+        gpsLabel.textContent = 'GPS Tidak Tersedia';
+        gpsDetail.textContent = 'Browser tidak mendukung geolocation';
+        return;
+      }
+
+      gpsLabel.textContent = 'Mendeteksi Lokasi...';
+      gpsDetail.textContent = 'Mohon izinkan akses lokasi';
+      gpsIcon.className = 'w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0';
+      gpsIcon.innerHTML = `<svg class="w-5 h-5 text-amber-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>`;
+
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          checkLocationValidity();
+        },
+        (err) => {
+          gpsLabel.textContent = 'Gagal Mendapatkan Lokasi';
+          gpsDetail.textContent = err.code === 1
+            ? 'Akses lokasi ditolak. Aktifkan di pengaturan browser.'
+            : 'Sinyal GPS lemah. Coba di tempat terbuka.';
+          gpsIcon.className = 'w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0';
+          gpsIcon.innerHTML = `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+      );
+    }
+
+    function checkLocationValidity() {
+      const schoolLat = parseFloat(schoolSettings.school_latitude || '-6.200000');
+      const schoolLng = parseFloat(schoolSettings.school_longitude || '106.816666');
+      const radius = parseFloat(schoolSettings.attendance_radius || '100');
+
+      const distance = calculateDistance(userLocation.lat, userLocation.lng, schoolLat, schoolLng);
+      const isInside = distance <= radius;
+
+      const gpsLabel = document.getElementById('gpsLabel');
+      const gpsDetail = document.getElementById('gpsDetail');
+      const gpsIcon = document.getElementById('gpsIcon');
+      const distanceBar = document.getElementById('distanceBar');
+      const distanceText = document.getElementById('distanceText');
+      const distanceFill = document.getElementById('distanceFill');
+      const btnAbsen = document.getElementById('btnAbsen');
+      const btnPulang = document.getElementById('btnPulang');
+
+      distanceBar.classList.remove('hidden');
+      distanceText.textContent = `${Math.round(distance)} m`;
+
+      // Fill bar (inversely proportional to radius, capped at 100%)
+      const percent = Math.min(100, (distance / radius) * 100);
+      distanceFill.style.width = `${percent}%`;
+      distanceFill.className = `h-2 rounded-full transition-all duration-500 ${isInside ? 'bg-emerald-500' : 'bg-red-500'}`;
+
+      if (isInside) {
+        gpsLabel.textContent = '✓ Dalam Radius Sekolah';
+        gpsDetail.textContent = `Jarak ${Math.round(distance)}m dari sekolah (batas ${radius}m)`;
+        gpsIcon.className = 'w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0';
+        gpsIcon.innerHTML = `<svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+
+        if (!todayAttendance?.check_in_time) btnAbsen.disabled = false;
+        if (todayAttendance?.check_in_time && !todayAttendance?.check_out_time) btnPulang.disabled = false;
+      } else {
+        gpsLabel.textContent = '✗ Di Luar Radius Sekolah';
+        gpsDetail.textContent = `Anda ${Math.round(distance)}m dari sekolah. Harus < ${radius}m untuk absen.`;
+        gpsIcon.className = 'w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0';
+        gpsIcon.innerHTML = `<svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+        btnAbsen.disabled = true;
+        btnPulang.disabled = true;
+      }
+    }
+
+    // Absen Masuk
+    document.getElementById('btnAbsen').addEventListener('click', async () => {
+      if (!userLocation) { showToast('Lokasi belum terdeteksi', 'error'); return; }
+      const btn = document.getElementById('btnAbsen');
+      setLoading(btn, true);
+
+      try {
+        const now = new Date();
+        const { error } = await sb.from('attendance').insert({
+          user_id: currentUser.id,
+          date: getTodayStr(),
+          check_in_time: getCurrentTime(),
+          latitude: userLocation.lat,
+          longitude: userLocation.lng,
+          status: 'hadir'
+        });
+
+        if (error) throw error;
+
+        showToast(`✓ Absen masuk berhasil pukul ${now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}`);
+        await loadTodayAttendance();
+        await loadHistory();
+        await loadStats();
+      } catch (err) {
+        showToast(err.message === 'duplicate key value violates unique constraint "attendance_user_id_date_key"'
+          ? 'Anda sudah absen hari ini' : 'Gagal absen: ' + err.message, 'error');
+      }
+      setLoading(btn, false);
+    });
+
+    // Absen Pulang
+    document.getElementById('btnPulang').addEventListener('click', async () => {
+      if (!userLocation) { showToast('Lokasi belum terdeteksi', 'error'); return; }
+      const btn = document.getElementById('btnPulang');
+      setLoading(btn, true);
+
+      try {
+        const now = new Date();
+        const { error } = await sb.from('attendance')
+          .update({
+            check_out_time: getCurrentTime(),
+            latitude_out: userLocation.lat,
+            longitude_out: userLocation.lng
+          })
+          .eq('user_id', currentUser.id)
+          .eq('date', getTodayStr());
+
+        if (error) throw error;
+
+        showToast(`✓ Absen pulang berhasil pukul ${now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}`);
+        await loadTodayAttendance();
+        await loadHistory();
+      } catch (err) {
+        showToast('Gagal absen pulang: ' + err.message, 'error');
+      }
+      setLoading(btn, false);
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      window.location.href = 'index.html';
+    });
+
+    init();
+  </script>
+</body>
+</html>
