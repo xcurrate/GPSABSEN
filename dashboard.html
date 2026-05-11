@@ -407,8 +407,13 @@ function updateAttendanceUI() {
         return;
       }
 
-      const statusColor = { hadir: 'bg-emerald-100 text-emerald-700', izin: 'bg-blue-100 text-blue-700', sakit: 'bg-amber-100 text-amber-700', alfa: 'bg-red-100 text-red-700' };
-
+      const statusColor = { 
+  hadir: 'bg-emerald-100 text-emerald-700', 
+  terlambat: 'bg-orange-100 text-orange-700', // Warna jingga untuk terlambat
+  izin: 'bg-blue-100 text-blue-700', 
+  sakit: 'bg-amber-100 text-amber-700', 
+  alfa: 'bg-red-100 text-red-700' 
+};
       container.innerHTML = data.map(item => `
         <div class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
           <div>
