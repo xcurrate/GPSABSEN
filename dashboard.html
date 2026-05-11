@@ -523,55 +523,57 @@ function updateAttendanceUI() {
       }
     }
 
-    // Absen Masuk
-    document.getElementById('btnAbsen').addEventListener('click', async () => {
-      if (!userLocation) { showToast('Lokasi belum terdeteksi', 'error'); return; }
-      
-      const now = new Date();
-  // Format waktu saat ini menjadi "HH:MM" (contoh: "20:00")
-  const currentHourMinute = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+    // Absen Masuk dengan Logika Terlambat
+document.getElementById('btnAbsen').addEventListener('click', async () => {
+  if (!userLocation) { showToast('Lokasi belum terdeteksi', 'error'); return; }
   
-  // Ambil pengaturan dari database (dengan nilai default jika kosong)
-  const checkInStart = schoolSettings.check_in_start || '06:30';
-  const checkInEnd = schoolSettings.check_in_end || '08:00';
+  const btn = document.getElementById('btnAbsen');
+  setLoading(btn, true);
 
-  if (currentHourMinute < checkInStart) {
-    showToast(`Absen masuk belum dibuka. Mulai pukul ${checkInStart}`, 'error');
-    return; // Hentikan eksekusi
-  }
+  try {
+    const now = new Date();
+    const currentTime = getCurrentTime(); // Format "HH:mm:ss"
+    const checkInEnd = schoolSettings.check_in_end || '08:00';
+    const checkInStart = schoolSettings.check_in_start || '06:30';
 
-  if (currentHourMinute > checkInEnd) {
-    showToast(`Gagal: Batas absen masuk (${checkInEnd}) sudah terlewat!`, 'error');
-    return; // Hentikan eksekusi
-  }
-  // --- BATAS TAMBAHAN VALIDASI WAKTU ---
-  
-      const btn = document.getElementById('btnAbsen');
-      setLoading(btn, true);
-
-      try {
-        const now = new Date();
-        const { error } = await sb.from('attendance').insert({
-          user_id: currentUser.id,
-          date: getTodayStr(),
-          check_in_time: getCurrentTime(),
-          latitude: userLocation.lat,
-          longitude: userLocation.lng,
-          status: 'hadir'
-        });
-
-        if (error) throw error;
-
-        showToast(`✓ Absen masuk berhasil pukul ${now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}`);
-        await loadTodayAttendance();
-        await loadHistory();
-        await loadStats();
-      } catch (err) {
-        showToast(err.message === 'duplicate key value violates unique constraint "attendance_user_id_date_key"'
-          ? 'Anda sudah absen hari ini' : 'Gagal absen: ' + err.message, 'error');
-      }
+    // 1. Validasi jika terlalu pagi
+    if (currentTime < checkInStart) {
+      showToast(`Absen belum dibuka. Mulai jam ${checkInStart}`, 'error');
       setLoading(btn, false);
+      return;
+    }
+
+    // 2. Tentukan status (Hadir atau Terlambat)
+    // Kita bandingkan jam & menit saja untuk akurasi
+    const statusFinal = (currentTime > checkInEnd) ? 'terlambat' : 'hadir';
+
+    const { error } = await sb.from('attendance').insert({
+      user_id: currentUser.id,
+      date: getTodayStr(),
+      check_in_time: currentTime,
+      latitude: userLocation.lat,
+      longitude: userLocation.lng,
+      status: statusFinal // Menggunakan status dinamis
     });
+
+    if (error) throw error;
+
+    const pesan = statusFinal === 'terlambat' 
+      ? `✓ Absen Berhasil (Terlambat)` 
+      : `✓ Absen Masuk Berhasil`;
+
+    showToast(`${pesan} pukul ${now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}`);
+    
+    await loadTodayAttendance();
+    await loadHistory();
+    await loadStats();
+  } catch (err) {
+    showToast(err.message.includes('duplicate') 
+      ? 'Anda sudah absen hari ini' : 'Gagal absen: ' + err.message, 'error');
+  }
+  setLoading(btn, false);
+});
+
 
     // Absen Pulang
     document.getElementById('btnPulang').addEventListener('click', async () => {
