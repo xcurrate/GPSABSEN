@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.attendance (
   longitude DECIMAL(11, 8),
   latitude_out DECIMAL(10, 8),
   longitude_out DECIMAL(11, 8),
-  status TEXT NOT NULL DEFAULT 'hadir' CHECK (status IN ('hadir', 'izin', 'sakit', 'alfa')),
+  status TEXT NOT NULL DEFAULT 'hadir' CHECK (status IN ('hadir', 'terlambat', 'izin', 'sakit', 'alfa')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, date)
@@ -124,7 +124,10 @@ CREATE POLICY "Users can view own attendance"
 CREATE POLICY "Users can insert own attendance"
   ON public.attendance FOR INSERT
   TO authenticated
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (
+    user_id = auth.uid() OR
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
 
 CREATE POLICY "Admin can update attendance"
   ON public.attendance FOR UPDATE
