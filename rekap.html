@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Rekap Absensi — Absensi Guru</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: #f0fdf4; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+    .nav-bar { background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 40; }
+    .status-hadir { background: #d1fae5; color: #065f46; }
+    .status-izin  { background: #dbeafe; color: #1e40af; }
+    .status-sakit { background: #fef3c7; color: #92400e; }
+    .status-alfa  { background: #fee2e2; color: #991b1b; }
+    .btn-export {
+      background: linear-gradient(135deg, #10b981, #059669);
+      transition: all 0.2s;
+    }
+    .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg opacity-0 transition-all duration-300"></div>
+
+  <!-- Navbar -->
+  <div class="nav-bar px-4 py-3">
+    <div class="flex items-center gap-3 max-w-md mx-auto">
+      <a href="dashboard.html" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center">
+        <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <p class="text-xs text-slate-400">Rekap</p>
+        <p class="text-sm font-semibold text-slate-800">Absensi Saya</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-md mx-auto px-4 pt-4 pb-8 space-y-4">
+
+    <!-- Filter Bulan -->
+    <div class="card p-4">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Filter Periode</p>
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="text-xs text-slate-400 block mb-1">Bulan</label>
+          <select id="filterMonth"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-emerald-400">
+          </select>
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-slate-400 block mb-1">Tahun</label>
+          <select id="filterYear"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:border-emerald-400">
+          </select>
+        </div>
+      </div>
+      <button id="filterBtn"
+        class="mt-3 w-full bg-slate-800 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-slate-700 transition-colors">
+        Tampilkan
+      </button>
+    </div>
+
+    <!-- Statistik -->
+    <div class="card p-4">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Ringkasan</p>
+      <div class="grid grid-cols-4 gap-2" id="statsGrid">
+        <div class="text-center bg-emerald-50 rounded-xl p-2.5">
+          <p id="sHadir" class="text-xl font-bold text-emerald-600">—</p>
+          <p class="text-xs text-emerald-500">Hadir</p>
+        </div>
+        <div class="text-center bg-blue-50 rounded-xl p-2.5">
+          <p id="sIzin" class="text-xl font-bold text-blue-600">—</p>
+          <p class="text-xs text-blue-500">Izin</p>
+        </div>
+        <div class="text-center bg-amber-50 rounded-xl p-2.5">
+          <p id="sSakit" class="text-xl font-bold text-amber-600">—</p>
+          <p class="text-xs text-amber-500">Sakit</p>
+        </div>
+        <div class="text-center bg-red-50 rounded-xl p-2.5">
+          <p id="sAlfa" class="text-xl font-bold text-red-500">—</p>
+          <p class="text-xs text-red-400">Alfa</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Button -->
+    <button id="exportBtn" class="btn-export w-full text-white py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Export CSV
+    </button>
+
+    <!-- Tabel Rekap -->
+    <div class="card overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-100">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Detail Absensi</p>
+      </div>
+      <div id="rekapTable" class="divide-y divide-slate-50">
+        <div class="p-8 text-center text-sm text-slate-400">Pilih periode dan klik Tampilkan</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    let currentUser = null;
+    let rekapData = [];
+
+    // Populate filter options
+    function populateFilters() {
+      const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      const monthSel = document.getElementById('filterMonth');
+      months.forEach((m, i) => {
+        const opt = document.createElement('option');
+        opt.value = i + 1;
+        opt.textContent = m;
+        monthSel.appendChild(opt);
+      });
+      monthSel.value = new Date().getMonth() + 1;
+
+      const yearSel = document.getElementById('filterYear');
+      const currentYear = new Date().getFullYear();
+      for (let y = currentYear; y >= currentYear - 3; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        yearSel.appendChild(opt);
+      }
+      yearSel.value = currentYear;
+    }
+
+    async function loadRekap() {
+      const month = parseInt(document.getElementById('filterMonth').value);
+      const year = parseInt(document.getElementById('filterYear').value);
+      const firstDay = `${year}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
+
+      document.getElementById('rekapTable').innerHTML =
+        '<div class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>';
+
+      const { data, error } = await sb.from('attendance')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .gte('date', firstDay)
+        .lte('date', lastDay)
+        .order('date', { ascending: false });
+
+      if (error) { showToast('Gagal memuat data', 'error'); return; }
+      rekapData = data || [];
+
+      // Stats
+      document.getElementById('sHadir').textContent = rekapData.filter(d => d.status === 'hadir').length;
+      document.getElementById('sIzin').textContent = rekapData.filter(d => d.status === 'izin').length;
+      document.getElementById('sSakit').textContent = rekapData.filter(d => d.status === 'sakit').length;
+      document.getElementById('sAlfa').textContent = rekapData.filter(d => d.status === 'alfa').length;
+
+      // Table
+      if (rekapData.length === 0) {
+        document.getElementById('rekapTable').innerHTML =
+          '<div class="p-8 text-center text-sm text-slate-400">Tidak ada data absensi periode ini</div>';
+        return;
+      }
+
+      const statusClass = { hadir: 'status-hadir', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
+
+      document.getElementById('rekapTable').innerHTML = rekapData.map(item => `
+        <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50">
+          <div>
+            <p class="text-sm font-medium text-slate-700">${formatDate(item.date)}</p>
+            <p class="text-xs text-slate-400 mt-0.5">
+              ${item.check_in_time ? '▶ ' + formatTime(item.check_in_time) : 'Tidak ada data masuk'}
+              ${item.check_out_time ? ' ◀ ' + formatTime(item.check_out_time) : ''}
+            </p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded-lg font-semibold ${statusClass[item.status] || 'bg-slate-100 text-slate-600'}">
+            ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+          </span>
+        </div>
+      `).join('');
+    }
+
+    // Export CSV
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      if (rekapData.length === 0) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
+
+      const headers = ['Tanggal', 'Jam Masuk', 'Jam Pulang', 'Status', 'Catatan'];
+      const rows = rekapData.map(item => [
+        item.date,
+        item.check_in_time ? formatTime(item.check_in_time) : '',
+        item.check_out_time ? formatTime(item.check_out_time) : '',
+        item.status,
+        item.notes || ''
+      ]);
+
+      const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const month = document.getElementById('filterMonth').value;
+      const year = document.getElementById('filterYear').value;
+      a.href = url;
+      a.download = `rekap-absensi-${year}-${String(month).padStart(2, '0')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('File CSV berhasil diunduh');
+    });
+
+    document.getElementById('filterBtn').addEventListener('click', loadRekap);
+
+    async function init() {
+      const user = await requireAuth('index.html');
+      if (!user) return;
+      currentUser = user;
+      populateFilters();
+      await loadRekap();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Login — Absensi Guru</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .bg-mesh {
+      background-color: #0f172a;
+      background-image:
+        radial-gradient(at 20% 30%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
+        radial-gradient(at 80% 70%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(99, 102, 241, 0.08) 0px, transparent 60%);
+    }
+    .glass {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .input-field {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      transition: all 0.2s;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.08);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+    .input-field::placeholder { color: rgba(255,255,255,0.3); }
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      transition: all 0.2s;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.35);
+    }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .logo-ring {
+      background: linear-gradient(135deg, #10b981, #3b82f6);
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    .float-anim { animation: float 3s ease-in-out infinite; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.6s ease forwards; }
+    .fade-in-delay { animation: fadeIn 0.6s ease 0.2s forwards; opacity: 0; }
+  </style>
+</head>
+<body class="bg-mesh min-h-screen flex items-center justify-center px-4">
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg opacity-0 transition-all duration-300 bg-emerald-500"></div>
+
+  <div class="w-full max-w-sm">
+
+    <!-- Logo -->
+    <div class="text-center mb-8 fade-in">
+      <div class="float-anim inline-block mb-4">
+        <div class="logo-ring w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl mx-auto">
+          <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+      </div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Absensi Guru</h1>
+      <p class="text-slate-400 text-sm mt-1">Sistem Kehadiran Berbasis GPS</p>
+    </div>
+
+    <!-- Card Login -->
+    <div class="glass rounded-2xl p-7 fade-in-delay">
+      <h2 class="text-white font-semibold text-lg mb-1">Selamat Datang</h2>
+      <p class="text-slate-400 text-sm mb-6">Masuk ke akun Anda untuk melanjutkan</p>
+
+      <form id="loginForm" class="space-y-4">
+        <!-- Email -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-2">Email</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <input type="email" id="email" placeholder="nama@sekolah.sch.id"
+              class="input-field w-full pl-10 pr-4 py-3 rounded-xl text-sm" required />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-2">Password</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+            </div>
+            <input type="password" id="password" placeholder="••••••••"
+              class="input-field w-full pl-10 pr-10 py-3 rounded-xl text-sm" required />
+            <button type="button" id="togglePassword"
+              class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white">
+              <svg class="w-4 h-4" id="eyeIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <div id="errorMsg" class="hidden bg-red-500/10 border border-red-500/20 text-red-400 text-xs px-3 py-2 rounded-lg"></div>
+
+        <!-- Submit -->
+        <button type="submit" id="loginBtn"
+          class="btn-primary w-full py-3 rounded-xl text-white font-semibold text-sm mt-2">
+          Masuk
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-slate-500 text-xs mt-6">
+      © 2024 Sistem Absensi Guru · Berbasis GPS
+    </p>
+  </div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    // Toggle password visibility
+    document.getElementById('togglePassword').addEventListener('click', () => {
+      const input = document.getElementById('password');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>`;
+      } else {
+        input.type = 'password';
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
+      }
+    });
+
+    // Check if already logged in
+    (async () => {
+      const user = await getCurrentUser();
+      if (user) {
+        const profile = await getUserProfile(user.id);
+        if (profile?.role === 'admin') {
+          window.location.href = 'admin.html';
+        } else {
+          window.location.href = 'dashboard.html';
+        }
+      }
+    })();
+
+    // Login form
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      errorMsg.classList.add('hidden');
+      setLoading(btn, true);
+
+      try {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+        if (error) throw error;
+
+        const profile = await getUserProfile(data.user.id);
+
+        if (!profile || !profile.is_active) {
+          await sb.auth.signOut();
+          throw new Error('Akun tidak aktif. Hubungi administrator.');
+        }
+
+        showToast(`Selamat datang, ${profile.full_name}!`);
+
+        setTimeout(() => {
+          if (profile.role === 'admin') {
+            window.location.href = 'admin.html';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        }, 800);
+
+      } catch (err) {
+        const messages = {
+          'Invalid login credentials': 'Email atau password salah.',
+          'Email not confirmed': 'Email belum dikonfirmasi.',
+        };
+        errorMsg.textContent = messages[err.message] || err.message;
+        errorMsg.classList.remove('hidden');
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>
