@@ -459,7 +459,7 @@
         return;
       }
 
-      const statusClass = { hadir: 'status-hadir', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
+      const statusClass = { hadir: 'status-hadir', terlambat: 'bg-orange-100 text-orange-700', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
 
       container.innerHTML = allAbsensiData.map(item => `
         <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 gap-2">
@@ -475,12 +475,45 @@
             <span class="text-xs px-2.5 py-1 rounded-lg font-semibold ${statusClass[item.status] || 'bg-slate-100 text-slate-600'}">
               ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}
             </span>
+            <button onclick="openEditAbsensi('${item.id}')" class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 hover:bg-blue-100" title="Edit">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L12 15l-4 1 1-4 8.586-8.586z"/></svg>
+            </button>
             <button onclick="deleteAbsensi('${item.id}')" class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
           </div>
         </div>
       `).join('');
+    }
+
+
+    function openEditAbsensi(id) {
+      const item = allAbsensiData.find(a => a.id === id);
+      if (!item) return;
+      document.getElementById('editAbsensiId').value = item.id;
+      document.getElementById('editAbsensiDate').value = item.date || '';
+      document.getElementById('editCheckIn').value = item.check_in_time ? item.check_in_time.substring(0,5) : '';
+      document.getElementById('editCheckOut').value = item.check_out_time ? item.check_out_time.substring(0,5) : '';
+      document.getElementById('editStatus').value = item.status || 'hadir';
+      openModal('modalAbsensi');
+    }
+
+    async function saveAbsensiEdit() {
+      const id = document.getElementById('editAbsensiId').value;
+      const btn = document.getElementById('saveAbsensiBtn');
+      const payload = {
+        date: document.getElementById('editAbsensiDate').value || null,
+        check_in_time: document.getElementById('editCheckIn').value || null,
+        check_out_time: document.getElementById('editCheckOut').value || null,
+        status: document.getElementById('editStatus').value,
+      };
+      setLoading(btn, true);
+      const { error } = await sb.from('attendance').update(payload).eq('id', id);
+      setLoading(btn, false);
+      if (error) { showToast('Gagal simpan perubahan absensi', 'error'); return; }
+      showToast('Perubahan absensi berhasil disimpan');
+      closeModal('modalAbsensi');
+      await loadAbsensi();
     }
 
     async function deleteAbsensi(id) {
