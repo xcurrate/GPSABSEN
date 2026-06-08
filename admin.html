@@ -1,1 +1,905 @@
-PASTE_FULL_UPDATED_ADMIN_HTML_HERE
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Admin Panel — Absensi Guru</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: #f8fafc; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+    .nav-bar { background: #1e293b; position: sticky; top: 0; z-index: 40; }
+    .sidebar-item { transition: all 0.15s; border-radius: 10px; }
+    .sidebar-item.active { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .sidebar-item:not(.active):hover { background: #f1f5f9; }
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.active { background: #1e293b; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .input-field {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      width: 100%;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      color: #1e293b;
+    }
+    .input-field:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+    .btn-green { background: linear-gradient(135deg, #10b981, #059669); transition: all 0.2s; }
+    .btn-green:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+    .btn-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .btn-red:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+    .btn-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .status-hadir { background: #d1fae5; color: #065f46; }
+    .status-izin  { background: #dbeafe; color: #1e40af; }
+    .status-sakit { background: #fef3c7; color: #92400e; }
+    .status-alfa  { background: #fee2e2; color: #991b1b; }
+    .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    .modal-box { animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+    select.input-field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; -webkit-appearance: none; }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg opacity-0 transition-all duration-300"></div>
+
+  <!-- Modal Tambah/Edit Guru -->
+  <div id="modalGuru" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-overlay">
+    <div class="modal-box bg-white rounded-2xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="modalGuruTitle" class="font-bold text-slate-800">Tambah Guru</h3>
+        <button onclick="closeModal('modalGuru')" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-3">
+        <input type="hidden" id="guruId" />
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Nama Lengkap *</label>
+          <input type="text" id="guruName" class="input-field" placeholder="Ahmad Budi, S.Pd" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Email *</label>
+          <input type="email" id="guruEmail" class="input-field" placeholder="ahmad@sekolah.sch.id" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Password (min. 6 karakter)</label>
+          <input type="password" id="guruPassword" class="input-field" placeholder="Isi untuk ganti password" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">NIP</label>
+          <input type="text" id="guruNip" class="input-field" placeholder="197001012000011001" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Mata Pelajaran</label>
+          <input type="text" id="guruSubject" class="input-field" placeholder="Matematika" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">No. HP</label>
+          <input type="tel" id="guruPhone" class="input-field" placeholder="08123456789" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Role</label>
+          <select id="guruRole" class="input-field">
+            <option value="guru">Guru</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Status</label>
+          <select id="guruActive" class="input-field">
+            <option value="true">Aktif</option>
+            <option value="false">Nonaktif</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button onclick="closeModal('modalGuru')" class="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">Batal</button>
+        <button id="saveGuruBtn" onclick="saveGuru()" class="btn-green flex-1 text-white py-2.5 rounded-xl text-sm font-semibold">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah/Edit Agenda -->
+  <div id="modalAgenda" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-overlay">
+    <div class="modal-box bg-white rounded-2xl w-full max-w-sm p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h3 id="modalAgendaTitle" class="font-bold text-slate-800">Tambah Agenda</h3>
+        <button onclick="closeModal('modalAgenda')" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center">
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-3">
+        <input type="hidden" id="agendaId" />
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Judul *</label>
+          <input type="text" id="agendaTitle" class="input-field" placeholder="Rapat Evaluasi" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Deskripsi</label>
+          <textarea id="agendaDesc" class="input-field resize-none" rows="2" placeholder="Detail agenda..."></textarea>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Tanggal *</label>
+          <input type="date" id="agendaDate" class="input-field" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Jam Mulai</label>
+            <input type="time" id="agendaStart" class="input-field" />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Jam Selesai</label>
+            <input type="time" id="agendaEnd" class="input-field" />
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Tipe</label>
+          <select id="agendaType" class="input-field">
+            <option value="agenda">Agenda</option>
+            <option value="rapat">Rapat</option>
+            <option value="libur">Libur</option>
+            <option value="kegiatan">Kegiatan</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button onclick="closeModal('modalAgenda')" class="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">Batal</button>
+        <button onclick="saveAgenda()" class="btn-green flex-1 text-white py-2.5 rounded-xl text-sm font-semibold">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <div class="nav-bar px-4 py-3">
+    <div class="flex items-center justify-between max-w-3xl mx-auto">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 leading-none">Admin Panel</p>
+          <p id="adminSchoolName" class="text-sm font-semibold text-white leading-tight">Absensi Guru</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="adminName" class="text-xs text-slate-300 hidden sm:block"></span>
+        <button id="logoutBtn" class="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-400 transition-colors bg-slate-700 hover:bg-red-500/10 px-3 py-2 rounded-xl">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          Keluar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="bg-white border-b border-slate-100 sticky top-14 z-30">
+    <div class="max-w-3xl mx-auto px-4 flex gap-1 py-2 overflow-x-auto scrollbar-hide">
+      <button onclick="switchTab('absensi')" id="tab-absensi" class="tab-btn active whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">📋 Absensi</button>
+      <button onclick="switchTab('guru')" id="tab-guru" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">👨‍🏫 Guru</button>
+      <button onclick="switchTab('agenda')" id="tab-agenda" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">📅 Agenda</button>
+      <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">⚙️ Pengaturan</button>
+    </div>
+  </div>
+
+  <div class="max-w-3xl mx-auto px-4 pt-4 pb-8">
+
+    <!-- ===== TAB ABSENSI ===== -->
+    <div id="panel-absensi" class="space-y-4">
+
+      <!-- Stats Summary -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="card p-4 text-center">
+          <p id="totalHadir" class="text-2xl font-bold text-emerald-600">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Hadir Hari Ini</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="totalGuru" class="text-2xl font-bold text-slate-700">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Total Guru</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="totalIzin" class="text-2xl font-bold text-amber-600">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Izin/Sakit</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="totalAlfa" class="text-2xl font-bold text-red-500">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Alfa</p>
+        </div>
+      </div>
+
+      <!-- Filter Absensi -->
+      <div class="card p-4">
+        <div class="flex flex-wrap gap-3">
+          <div class="flex-1 min-w-32">
+            <label class="text-xs text-slate-400 block mb-1">Dari Tanggal</label>
+            <input type="date" id="absenFromDate" class="input-field" />
+          </div>
+          <div class="flex-1 min-w-32">
+            <label class="text-xs text-slate-400 block mb-1">Sampai Tanggal</label>
+            <input type="date" id="absenToDate" class="input-field" />
+          </div>
+          <div class="flex-1 min-w-32">
+            <label class="text-xs text-slate-400 block mb-1">Nama Guru</label>
+            <input type="text" id="absenSearchName" class="input-field" placeholder="Cari nama..." />
+          </div>
+        </div>
+        <div class="flex gap-2 mt-3">
+          <button onclick="loadAbsensi()" class="flex-1 btn-green text-white py-2.5 rounded-xl text-sm font-medium">Cari</button>
+          <button onclick="exportAbsensiCSV()" class="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabel Absensi -->
+      <div class="card overflow-hidden">
+        <div id="absensiTable" class="divide-y divide-slate-50">
+          <div class="p-8 text-center text-sm text-slate-400">Memuat data...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB GURU ===== -->
+    <div id="panel-guru" class="space-y-4 hidden">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-semibold text-slate-700">Daftar Guru <span id="guruCount" class="text-slate-400 font-normal"></span></p>
+        <button onclick="openAddGuru()" class="btn-green text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Tambah
+        </button>
+      </div>
+      <div class="card overflow-hidden">
+        <div id="guruTable" class="divide-y divide-slate-50">
+          <div class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB AGENDA ===== -->
+    <div id="panel-agenda" class="space-y-4 hidden">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-semibold text-slate-700">Agenda & Rencana</p>
+        <button onclick="openAddAgenda()" class="btn-green text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Tambah
+        </button>
+      </div>
+      <div class="card p-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Dari</label>
+            <input type="date" id="agendaFrom" class="input-field" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Sampai</label>
+            <input type="date" id="agendaTo" class="input-field" />
+          </div>
+        </div>
+        <button onclick="loadAgenda()" class="mt-3 w-full btn-green text-white py-2.5 rounded-xl text-sm font-medium">Filter</button>
+      </div>
+      <div class="card overflow-hidden">
+        <div id="agendaTable" class="divide-y divide-slate-50">
+          <div class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB SETTINGS ===== -->
+    <div id="panel-settings" class="space-y-4 hidden">
+      <div class="card p-5">
+        <h3 class="font-semibold text-slate-700 mb-4">Informasi Sekolah</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Nama Sekolah</label>
+            <input type="text" id="set_school_name" class="input-field" placeholder="SMA Negeri 1..." />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Alamat Sekolah</label>
+            <input type="text" id="set_school_address" class="input-field" placeholder="Jl. Pendidikan..." />
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <h3 class="font-semibold text-slate-700 mb-4">Lokasi GPS Sekolah</h3>
+        <p class="text-xs text-slate-400 mb-3">Koordinat pusat sekolah untuk validasi absensi</p>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Latitude</label>
+            <input type="number" step="0.000001" id="set_school_latitude" class="input-field" placeholder="-6.200000" />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Longitude</label>
+            <input type="number" step="0.000001" id="set_school_longitude" class="input-field" placeholder="106.816666" />
+          </div>
+        </div>
+        <button onclick="getCurrentLocationForSettings()" class="w-full bg-blue-50 text-blue-600 border border-blue-200 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-100 transition-colors flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Gunakan Lokasi Saya Sekarang
+        </button>
+      </div>
+
+      <div class="card p-5">
+        <h3 class="font-semibold text-slate-700 mb-4">Pengaturan Absensi</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Radius Absensi (meter)</label>
+            <input type="number" id="set_attendance_radius" class="input-field" placeholder="100" min="10" max="5000" />
+            <p class="text-xs text-slate-400 mt-1">Guru harus berada dalam radius ini dari koordinat sekolah</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-medium text-slate-500 block mb-1">Buka Absen Masuk</label>
+              <input type="time" id="set_check_in_start" class="input-field" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 block mb-1">Tutup Absen Masuk</label>
+              <input type="time" id="set_check_in_end" class="input-field" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-medium text-slate-500 block mb-1">Buka Absen Pulang</label>
+              <input type="time" id="set_check_out_start" class="input-field" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 block mb-1">Tutup Absen Pulang</label>
+              <input type="time" id="set_check_out_end" class="input-field" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="saveSettings()" id="saveSettingsBtn" class="btn-green w-full text-white py-3.5 rounded-2xl text-sm font-semibold">
+        Simpan Semua Pengaturan
+      </button>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    let currentAdmin = null;
+    let allAbsensiData = [];
+    let allGuruData = [];
+    let allAgendaData = [];
+    let editingGuruId = null;
+    let editingAgendaId = null;
+
+    // ===== TAB SWITCHING =====
+    function switchTab(tab) {
+      ['absensi','guru','agenda','settings'].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).classList.remove('active');
+      });
+      document.getElementById(`panel-${tab}`).classList.remove('hidden');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+
+      if (tab === 'guru') loadGuru();
+      if (tab === 'agenda') loadAgenda();
+      if (tab === 'settings') loadSettings();
+    }
+
+    // ===== MODAL =====
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // Close modal on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target === el) el.classList.add('hidden');
+      });
+    });
+
+    // ===== INIT =====
+    async function init() {
+      const result = await requireAdmin('dashboard.html');
+      if (!result) return;
+      currentAdmin = result;
+
+      document.getElementById('adminName').textContent = result.profile.full_name;
+      document.getElementById('adminSchoolName').textContent = 'Admin Panel';
+
+      // Set default dates for filters
+      const today = getTodayStr();
+      document.getElementById('absenFromDate').value = today;
+      document.getElementById('absenToDate').value = today;
+
+      const now = new Date();
+      const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      document.getElementById('agendaFrom').value = firstDay;
+      document.getElementById('agendaTo').value = lastDay;
+
+      await loadAbsensi();
+      await loadDashboardStats();
+    }
+
+    // ===== ABSENSI =====
+    async function loadAbsensi() {
+      const from = document.getElementById('absenFromDate').value;
+      const to = document.getElementById('absenToDate').value;
+      const search = document.getElementById('absenSearchName').value.toLowerCase();
+
+      document.getElementById('absensiTable').innerHTML =
+        '<div class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>';
+
+      let query = sb.from('attendance')
+        .select('*, profiles!inner(full_name, nip, subject)')
+        .order('date', { ascending: false })
+        .order('check_in_time', { ascending: true });
+
+      if (from) query = query.gte('date', from);
+      if (to) query = query.lte('date', to);
+
+      const { data, error } = await query;
+      if (error) { showToast('Gagal memuat absensi', 'error'); return; }
+
+      allAbsensiData = (data || []).filter(item =>
+        !search || item.profiles.full_name.toLowerCase().includes(search)
+      );
+
+      renderAbsensiTable();
+    }
+
+    function renderAbsensiTable() {
+      const container = document.getElementById('absensiTable');
+      if (allAbsensiData.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">Tidak ada data absensi</div>';
+        return;
+      }
+
+      const statusClass = { hadir: 'status-hadir', terlambat: 'bg-orange-100 text-orange-700', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
+
+      container.innerHTML = allAbsensiData.map(item => `
+        <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 gap-2">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-700 truncate">${item.profiles.full_name}</p>
+            <p class="text-xs text-slate-400">
+              ${formatDate(item.date)} ·
+              ${item.check_in_time ? formatTime(item.check_in_time) : '—'}
+              ${item.check_out_time ? '→ ' + formatTime(item.check_out_time) : ''}
+            </p>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="text-xs px-2.5 py-1 rounded-lg font-semibold ${statusClass[item.status] || 'bg-slate-100 text-slate-600'}">
+              ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </span>
+            <button onclick="openEditAbsensi('${item.id}')" class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 hover:bg-blue-100" title="Edit">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L12 15l-4 1 1-4 8.586-8.586z"/></svg>
+            </button>
+            <button onclick="deleteAbsensi('${item.id}')" class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+
+    function openEditAbsensi(id) {
+      const item = allAbsensiData.find(a => a.id === id);
+      if (!item) return;
+      document.getElementById('editAbsensiId').value = item.id;
+      document.getElementById('editAbsensiDate').value = item.date || '';
+      document.getElementById('editCheckIn').value = item.check_in_time ? item.check_in_time.substring(0,5) : '';
+      document.getElementById('editCheckOut').value = item.check_out_time ? item.check_out_time.substring(0,5) : '';
+      document.getElementById('editStatus').value = item.status || 'hadir';
+      openModal('modalAbsensi');
+    }
+
+    async function saveAbsensiEdit() {
+      const id = document.getElementById('editAbsensiId').value;
+      const btn = document.getElementById('saveAbsensiBtn');
+      const payload = {
+        date: document.getElementById('editAbsensiDate').value || null,
+        check_in_time: document.getElementById('editCheckIn').value || null,
+        check_out_time: document.getElementById('editCheckOut').value || null,
+        status: document.getElementById('editStatus').value,
+      };
+      setLoading(btn, true);
+      const { error } = await sb.from('attendance').update(payload).eq('id', id);
+      setLoading(btn, false);
+      if (error) { showToast('Gagal simpan perubahan absensi', 'error'); return; }
+      showToast('Perubahan absensi berhasil disimpan');
+      closeModal('modalAbsensi');
+      await loadAbsensi();
+    }
+
+    async function deleteAbsensi(id) {
+      if (!confirm('Hapus data absensi ini?')) return;
+      const { error } = await sb.from('attendance').delete().eq('id', id);
+      if (error) { showToast('Gagal hapus', 'error'); return; }
+      showToast('Data absensi dihapus');
+      await loadAbsensi();
+    }
+
+    function exportAbsensiCSV() {
+      if (allAbsensiData.length === 0) { showToast('Tidak ada data', 'warning'); return; }
+      const headers = ['Nama', 'NIP', 'Mata Pelajaran', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Status'];
+      const rows = allAbsensiData.map(item => [
+        item.profiles.full_name,
+        item.profiles.nip || '',
+        item.profiles.subject || '',
+        item.date,
+        item.check_in_time ? formatTime(item.check_in_time) : '',
+        item.check_out_time ? formatTime(item.check_out_time) : '',
+        item.status
+      ]);
+      const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `absensi-semua-guru-${getTodayStr()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('CSV berhasil diexport');
+    }
+
+    async function loadDashboardStats() {
+      const today = getTodayStr();
+      const [absenHari, totalGuru] = await Promise.all([
+        sb.from('attendance').select('status').eq('date', today),
+        sb.from('profiles').select('id').eq('role', 'guru').eq('is_active', true)
+      ]);
+
+      const data = absenHari.data || [];
+      document.getElementById('totalHadir').textContent = data.filter(d => d.status === 'hadir').length;
+      document.getElementById('totalIzin').textContent = data.filter(d => d.status === 'izin' || d.status === 'sakit').length;
+      document.getElementById('totalAlfa').textContent = data.filter(d => d.status === 'alfa').length;
+      document.getElementById('totalGuru').textContent = (totalGuru.data || []).length;
+    }
+
+    // ===== GURU =====
+    async function loadGuru() {
+      const { data, error } = await sb.from('profiles').select('*').order('full_name');
+      if (error) { showToast('Gagal memuat data guru', 'error'); return; }
+      allGuruData = data || [];
+      document.getElementById('guruCount').textContent = `(${allGuruData.length})`;
+      renderGuruTable();
+    }
+
+    function renderGuruTable() {
+      const container = document.getElementById('guruTable');
+      if (allGuruData.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">Belum ada guru terdaftar</div>';
+        return;
+      }
+
+      container.innerHTML = allGuruData.map(guru => `
+        <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 gap-2">
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
+              <span class="text-white text-xs font-bold">${guru.full_name.charAt(0).toUpperCase()}</span>
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-slate-700 truncate">${guru.full_name}</p>
+              <p class="text-xs text-slate-400 truncate">${guru.subject || '—'} · ${guru.role === 'admin' ? '🛡️ Admin' : '👨‍🏫 Guru'}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${guru.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+              ${guru.is_active ? 'Aktif' : 'Nonaktif'}
+            </span>
+            <button onclick="openEditGuru('${guru.id}')" class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 hover:bg-blue-100">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button onclick="deleteGuru('${guru.id}')" class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openAddGuru() {
+      editingGuruId = null;
+      document.getElementById('modalGuruTitle').textContent = 'Tambah Guru Baru';
+      document.getElementById('guruId').value = '';
+      document.getElementById('guruName').value = '';
+      document.getElementById('guruEmail').value = '';
+      document.getElementById('guruPassword').value = '';
+      document.getElementById('guruNip').value = '';
+      document.getElementById('guruSubject').value = '';
+      document.getElementById('guruPhone').value = '';
+      document.getElementById('guruRole').value = 'guru';
+      document.getElementById('guruActive').value = 'true';
+      document.getElementById('guruEmail').disabled = false;
+      openModal('modalGuru');
+    }
+
+    function openEditGuru(id) {
+      const guru = allGuruData.find(g => g.id === id);
+      if (!guru) return;
+      editingGuruId = id;
+      document.getElementById('modalGuruTitle').textContent = 'Edit Data Guru';
+      document.getElementById('guruId').value = id;
+      document.getElementById('guruName').value = guru.full_name;
+      document.getElementById('guruEmail').value = '(email tidak dapat diubah)';
+      document.getElementById('guruEmail').disabled = true;
+      document.getElementById('guruPassword').value = '';
+      document.getElementById('guruNip').value = guru.nip || '';
+      document.getElementById('guruSubject').value = guru.subject || '';
+      document.getElementById('guruPhone').value = guru.phone || '';
+      document.getElementById('guruRole').value = guru.role;
+      document.getElementById('guruActive').value = String(guru.is_active);
+      openModal('modalGuru');
+    }
+
+    async function saveGuru() {
+      const btn = document.getElementById('saveGuruBtn');
+      const name = document.getElementById('guruName').value.trim();
+      const email = document.getElementById('guruEmail').value.trim();
+      const password = document.getElementById('guruPassword').value;
+      const nip = document.getElementById('guruNip').value.trim();
+      const subject = document.getElementById('guruSubject').value.trim();
+      const phone = document.getElementById('guruPhone').value.trim();
+      const role = document.getElementById('guruRole').value;
+      const isActive = document.getElementById('guruActive').value === 'true';
+
+      if (!name) { showToast('Nama wajib diisi', 'error'); return; }
+
+      setLoading(btn, true);
+
+      try {
+        if (!editingGuruId) {
+          // ── TAMBAH GURU BARU ──────────────────────────────────
+          if (!email || !password || password.length < 6) {
+            throw new Error('Email dan password (min 6 karakter) wajib untuk guru baru');
+          }
+
+          const { data: { session } } = await sb.auth.getSession();
+          if (!session?.access_token) throw new Error('Sesi admin tidak valid, silakan login ulang.');
+
+          const adminCreateEndpoint = window.location.hostname.includes('netlify.app') ? '/.netlify/functions/admin-create-user' : '/api/admin-create-user';
+          const createRes = await fetch(adminCreateEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              email,
+              password,
+              full_name: name,
+              role,
+              nip,
+              subject,
+              phone,
+              is_active: isActive,
+            }),
+          });
+
+          const createData = await createRes.json();
+          if (!createRes.ok) {
+            const msg = createData?.error || createData?.message || JSON.stringify(createData);
+            throw new Error(msg);
+          }
+
+          const newUserId = createData.id;
+          if (!newUserId) throw new Error('Gagal mendapatkan ID user baru dari Supabase.');
+
+          showToast(`✓ Guru ${name} berhasil ditambahkan`);
+
+        } else {
+          // ── EDIT GURU ─────────────────────────────────────────
+          const { error: updateErr } = await sb.from('profiles').update({
+            full_name: name,
+            nip:     nip     || null,
+            subject: subject || null,
+            phone:   phone   || null,
+            role,
+            is_active: isActive,
+          }).eq('id', editingGuruId);
+          if (updateErr) throw updateErr;
+
+          showToast(`✓ Data ${name} berhasil diperbarui`);
+        }
+
+        closeModal('modalGuru');
+        await loadGuru();
+      } catch (err) {
+        showToast('Gagal: ' + err.message, 'error');
+      }
+      setLoading(btn, false);
+    }
+
+    async function deleteGuru(id) {
+      const guru = allGuruData.find(g => g.id === id);
+      if (!confirm(`Hapus data guru ${guru?.full_name}? Data absensinya juga akan terhapus.`)) return;
+
+      // Soft delete: set is_active = false
+      const { error } = await sb.from('profiles').update({ is_active: false }).eq('id', id);
+      if (error) { showToast('Gagal menghapus', 'error'); return; }
+      showToast('Guru berhasil dinonaktifkan');
+      await loadGuru();
+    }
+
+    // ===== AGENDA =====
+    async function loadAgenda() {
+      const from = document.getElementById('agendaFrom').value;
+      const to = document.getElementById('agendaTo').value;
+
+      let query = sb.from('schedules').select('*, profiles(full_name)').order('event_date').order('start_time');
+      if (from) query = query.gte('event_date', from);
+      if (to) query = query.lte('event_date', to);
+
+      const { data, error } = await query;
+      if (error) { showToast('Gagal memuat agenda', 'error'); return; }
+      allAgendaData = data || [];
+      renderAgendaTable();
+    }
+
+    function renderAgendaTable() {
+      const container = document.getElementById('agendaTable');
+      if (allAgendaData.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">Belum ada agenda</div>';
+        return;
+      }
+
+      const typeIcon = { agenda: '📋', rapat: '👥', libur: '🏖️', kegiatan: '🎯' };
+      const typeBg = { agenda: 'bg-blue-50', rapat: 'bg-purple-50', libur: 'bg-orange-50', kegiatan: 'bg-emerald-50' };
+
+      container.innerHTML = allAgendaData.map(item => `
+        <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 gap-2">
+          <div class="flex items-start gap-3 flex-1 min-w-0">
+            <div class="w-9 h-9 rounded-xl ${typeBg[item.event_type] || 'bg-slate-50'} flex items-center justify-center flex-shrink-0 text-base">
+              ${typeIcon[item.event_type] || '📋'}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-slate-700 truncate">${item.title}</p>
+              <p class="text-xs text-slate-400">${formatDate(item.event_date)} · ${item.start_time ? formatTime(item.start_time) : 'Sepanjang hari'}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button onclick="openEditAgenda('${item.id}')" class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 hover:bg-blue-100">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button onclick="deleteAgenda('${item.id}')" class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openAddAgenda() {
+      editingAgendaId = null;
+      document.getElementById('modalAgendaTitle').textContent = 'Tambah Agenda';
+      document.getElementById('agendaId').value = '';
+      document.getElementById('agendaTitle').value = '';
+      document.getElementById('agendaDesc').value = '';
+      document.getElementById('agendaDate').value = getTodayStr();
+      document.getElementById('agendaStart').value = '';
+      document.getElementById('agendaEnd').value = '';
+      document.getElementById('agendaType').value = 'agenda';
+      openModal('modalAgenda');
+    }
+
+    function openEditAgenda(id) {
+      const item = allAgendaData.find(a => a.id === id);
+      if (!item) return;
+      editingAgendaId = id;
+      document.getElementById('modalAgendaTitle').textContent = 'Edit Agenda';
+      document.getElementById('agendaId').value = id;
+      document.getElementById('agendaTitle').value = item.title;
+      document.getElementById('agendaDesc').value = item.description || '';
+      document.getElementById('agendaDate').value = item.event_date;
+      document.getElementById('agendaStart').value = item.start_time ? item.start_time.substring(0, 5) : '';
+      document.getElementById('agendaEnd').value = item.end_time ? item.end_time.substring(0, 5) : '';
+      document.getElementById('agendaType').value = item.event_type;
+      openModal('modalAgenda');
+    }
+
+    async function saveAgenda() {
+      const title = document.getElementById('agendaTitle').value.trim();
+      const desc = document.getElementById('agendaDesc').value.trim();
+      const date = document.getElementById('agendaDate').value;
+      const start = document.getElementById('agendaStart').value;
+      const end = document.getElementById('agendaEnd').value;
+      const type = document.getElementById('agendaType').value;
+
+      if (!title || !date) { showToast('Judul dan tanggal wajib diisi', 'error'); return; }
+
+      const payload = {
+        title, description: desc || null,
+        event_date: date,
+        start_time: start || null,
+        end_time: end || null,
+        event_type: type,
+        created_by: currentAdmin.user.id
+      };
+
+      let error;
+      if (editingAgendaId) {
+        ({ error } = await sb.from('schedules').update(payload).eq('id', editingAgendaId));
+      } else {
+        ({ error } = await sb.from('schedules').insert(payload));
+      }
+
+      if (error) { showToast('Gagal menyimpan: ' + error.message, 'error'); return; }
+
+      showToast(editingAgendaId ? 'Agenda diperbarui' : 'Agenda berhasil ditambahkan');
+      closeModal('modalAgenda');
+      await loadAgenda();
+    }
+
+    async function deleteAgenda(id) {
+      if (!confirm('Hapus agenda ini?')) return;
+      const { error } = await sb.from('schedules').delete().eq('id', id);
+      if (error) { showToast('Gagal hapus', 'error'); return; }
+      showToast('Agenda dihapus');
+      await loadAgenda();
+    }
+
+    // ===== SETTINGS =====
+    async function loadSettings() {
+      const { data } = await sb.from('settings').select('key, value');
+      if (data) {
+        data.forEach(s => {
+          const el = document.getElementById(`set_${s.key}`);
+          if (el) el.value = s.value;
+        });
+      }
+    }
+
+    async function saveSettings() {
+      const btn = document.getElementById('saveSettingsBtn');
+      setLoading(btn, true);
+
+      const keys = ['school_name', 'school_address', 'school_latitude', 'school_longitude',
+                    'attendance_radius', 'check_in_start', 'check_in_end', 'check_out_start', 'check_out_end'];
+
+      try {
+        for (const key of keys) {
+          const el = document.getElementById(`set_${key}`);
+          if (!el) continue;
+          const val = el.value.trim();
+          if (!val) continue;
+          await sb.from('settings').upsert(
+            { key, value: val, updated_by: currentAdmin.user.id },
+            { onConflict: 'key' }
+          );
+        }
+        showToast('Semua pengaturan berhasil disimpan! ✓');
+      } catch (err) {
+        showToast('Gagal menyimpan: ' + err.message, 'error');
+      }
+      setLoading(btn, false);
+    }
+
+    function getCurrentLocationForSettings() {
+      if (!navigator.geolocation) { showToast('GPS tidak tersedia', 'error'); return; }
+      showToast('Mendeteksi lokasi...', 'info');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById('set_school_latitude').value = pos.coords.latitude.toFixed(6);
+          document.getElementById('set_school_longitude').value = pos.coords.longitude.toFixed(6);
+          showToast(`Koordinat didapat: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+        },
+        () => showToast('Gagal mendapatkan lokasi', 'error'),
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      window.location.href = 'index.html';
+    });
+
+    init();
+  </script>
+</body>
+</html>
