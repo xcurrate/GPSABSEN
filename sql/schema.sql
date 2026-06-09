@@ -186,6 +186,10 @@ CREATE POLICY "Admin can manage schedules"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
+  IF NEW.email !~* '^[^[:space:]@]+@[^[:space:]@]+\.sch\.id$' THEN
+    RAISE EXCEPTION 'Email harus menggunakan domain sekolah berakhiran .sch.id, contoh nama@mitakbr.sch.id';
+  END IF;
+
   INSERT INTO public.profiles (id, full_name, role, nip, subject, phone, is_active)
   VALUES (
     NEW.id,

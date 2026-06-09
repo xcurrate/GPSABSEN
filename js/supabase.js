@@ -9,6 +9,12 @@ const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3Mi
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+
+// Helper: validate school email domain (.sch.id), e.g. nama@mitakbr.sch.id
+function isSchoolEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.sch\.id$/i.test(String(email || '').trim());
+}
+
 // Helper: get current user session
 async function getCurrentUser() {
   const { data: { session } } = await sb.auth.getSession();

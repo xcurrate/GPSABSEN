@@ -85,8 +85,20 @@
 
     <!-- Card Login -->
     <div class="glass rounded-2xl p-7 fade-in-delay">
-      <h2 class="text-white font-semibold text-lg mb-1">Selamat Datang</h2>
-      <p class="text-slate-400 text-sm mb-6">Masuk ke akun Anda untuk melanjutkan</p>
+      <div class="flex rounded-xl bg-white/5 p-1 mb-5">
+        <button type="button" id="showLoginBtn" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-500">Masuk</button>
+        <button type="button" id="showSignupBtn" class="flex-1 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-white">Daftar</button>
+      </div>
+
+      <div id="loginHeader">
+        <h2 class="text-white font-semibold text-lg mb-1">Selamat Datang</h2>
+        <p class="text-slate-400 text-sm mb-6">Masuk ke akun Anda untuk melanjutkan</p>
+      </div>
+
+      <div id="signupHeader" class="hidden">
+        <h2 class="text-white font-semibold text-lg mb-1">Daftar Akun Guru</h2>
+        <p class="text-slate-400 text-sm mb-6">Gunakan email sekolah berakhiran .sch.id, contoh nama@mitakbr.sch.id</p>
+      </div>
 
       <form id="loginForm" class="space-y-4">
         <!-- Email -->
@@ -137,6 +149,61 @@
           Masuk
         </button>
       </form>
+
+      <form id="signupForm" class="hidden space-y-4">
+        <!-- Nama Lengkap -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-2">Nama Lengkap</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <input type="text" id="signupName" placeholder="Nama lengkap"
+              class="input-field w-full pl-10 pr-4 py-3 rounded-xl text-sm" required />
+          </div>
+        </div>
+
+        <!-- Email Signup -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-2">Email Sekolah (.sch.id)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <input type="email" id="signupEmail" placeholder="nama@mitakbr.sch.id"
+              class="input-field w-full pl-10 pr-4 py-3 rounded-xl text-sm" required />
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Pendaftaran hanya menerima domain sekolah berakhiran .sch.id.</p>
+        </div>
+
+        <!-- Password Signup -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-2">Password</label>
+          <input type="password" id="signupPassword" placeholder="Minimal 6 karakter"
+            class="input-field w-full px-4 py-3 rounded-xl text-sm" required />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-2">Konfirmasi Password</label>
+          <input type="password" id="signupPasswordConfirm" placeholder="Ulangi password"
+            class="input-field w-full px-4 py-3 rounded-xl text-sm" required />
+        </div>
+
+        <!-- Signup Error message -->
+        <div id="signupErrorMsg" class="hidden bg-red-500/10 border border-red-500/20 text-red-400 text-xs px-3 py-2 rounded-lg"></div>
+
+        <!-- Submit Signup -->
+        <button type="submit" id="signupBtn"
+          class="btn-primary w-full py-3 rounded-xl text-white font-semibold text-sm mt-2">
+          Daftar
+        </button>
+      </form>
     </div>
 
     <p class="text-center text-slate-500 text-xs mt-6">
@@ -160,6 +227,35 @@
         icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>`;
       }
     });
+
+    function setAuthMode(mode) {
+      const isSignup = mode === 'signup';
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      const loginHeader = document.getElementById('loginHeader');
+      const signupHeader = document.getElementById('signupHeader');
+      const showLoginBtn = document.getElementById('showLoginBtn');
+      const showSignupBtn = document.getElementById('showSignupBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const signupErrorMsg = document.getElementById('signupErrorMsg');
+
+      loginForm.classList.toggle('hidden', isSignup);
+      signupForm.classList.toggle('hidden', !isSignup);
+      loginHeader.classList.toggle('hidden', isSignup);
+      signupHeader.classList.toggle('hidden', !isSignup);
+      errorMsg.classList.add('hidden');
+      signupErrorMsg.classList.add('hidden');
+
+      showLoginBtn.className = isSignup
+        ? 'flex-1 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-white'
+        : 'flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-500';
+      showSignupBtn.className = isSignup
+        ? 'flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-500'
+        : 'flex-1 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-white';
+    }
+
+    document.getElementById('showLoginBtn').addEventListener('click', () => setAuthMode('login'));
+    document.getElementById('showSignupBtn').addEventListener('click', () => setAuthMode('signup'));
 
     // Check if already logged in
     (async () => {
@@ -215,6 +311,62 @@
         errorMsg.textContent = messages[err.message] || err.message;
         errorMsg.classList.remove('hidden');
         setLoading(btn, false);
+      }
+    });
+
+    // Signup form
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('signupBtn');
+      const signupErrorMsg = document.getElementById('signupErrorMsg');
+      const fullName = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+      const password = document.getElementById('signupPassword').value;
+      const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+      let loadingStarted = false;
+
+      signupErrorMsg.classList.add('hidden');
+
+      try {
+        if (!fullName) throw new Error('Nama lengkap wajib diisi.');
+        if (!isSchoolEmail(email)) throw new Error('Email harus menggunakan domain sekolah berakhiran .sch.id, contoh nama@mitakbr.sch.id.');
+        if (password.length < 6) throw new Error('Password minimal 6 karakter.');
+        if (password !== passwordConfirm) throw new Error('Konfirmasi password tidak sama.');
+
+        setLoading(btn, true);
+        loadingStarted = true;
+
+        const { data, error } = await sb.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              role: 'guru',
+              is_active: true,
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.session) {
+          showToast('Pendaftaran berhasil. Mengalihkan ke dashboard...');
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+        } else {
+          showToast('Pendaftaran berhasil. Silakan cek email untuk konfirmasi akun.', 'success');
+          document.getElementById('signupForm').reset();
+          setAuthMode('login');
+        }
+      } catch (err) {
+        const messages = {
+          'User already registered': 'Email sudah terdaftar.',
+          'Password should be at least 6 characters': 'Password minimal 6 karakter.',
+        };
+        signupErrorMsg.textContent = messages[err.message] || err.message;
+        signupErrorMsg.classList.remove('hidden');
+      } finally {
+        if (loadingStarted) setLoading(btn, false);
       }
     });
   </script>
