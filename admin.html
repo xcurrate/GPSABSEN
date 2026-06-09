@@ -280,13 +280,19 @@
             <input type="text" id="absenSearchName" class="input-field" placeholder="Cari nama..." />
           </div>
         </div>
-        <div class="flex gap-2 mt-3">
+        <div class="flex flex-wrap gap-2 mt-3">
           <button onclick="loadAbsensi()" class="flex-1 btn-green text-white py-2.5 rounded-xl text-sm font-medium">Cari</button>
+          <button id="importAbsensiBtn" onclick="openImportAbsensiFile()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0-12l-4 4m4-4l4 4M4 20h16"/></svg>
+            Import CSV
+          </button>
+          <input type="file" id="importAbsensiInput" class="hidden" accept=".csv,text/csv" />
           <button onclick="exportAbsensiCSV()" class="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-700">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             CSV
           </button>
         </div>
+        <p class="text-xs text-slate-400 mt-2">Format import: Nama/NIP, Tanggal, Jam Masuk, Jam Pulang, Status, Catatan. Jika data guru dan tanggal sudah ada, data akan diperbarui.</p>
       </div>
 
       <!-- Tabel Absensi -->
@@ -609,6 +615,172 @@
     }
 
 
+    function csvEscape(value) {
+      const str = String(value ?? '');
+      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let field = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            field += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          row.push(field.trim());
+          field = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && next === '\n') i++;
+          row.push(field.trim());
+          if (row.some(cell => cell !== '')) rows.push(row);
+          row = [];
+          field = '';
+        } else {
+          field += char;
+        }
+      }
+
+      row.push(field.trim());
+      if (row.some(cell => cell !== '')) rows.push(row);
+      return rows;
+    }
+
+    function normalizeCSVHeader(header) {
+      return header.toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+
+    function normalizeImportDate(value) {
+      const clean = String(value || '').trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+
+      const slashMatch = clean.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+      if (!slashMatch) return null;
+
+      const [, day, month, year] = slashMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+
+    function normalizeImportTime(value) {
+      if (!value) return null;
+      const clean = String(value).trim();
+      const match = clean.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if (!match) return null;
+
+      const [, hour, minute, second = '00'] = match;
+      return `${hour.padStart(2, '0')}:${minute}:${second}`;
+    }
+
+    function normalizeImportStatus(value) {
+      const status = String(value || '').trim().toLowerCase();
+      const aliases = { telat: 'terlambat', terlambat: 'terlambat', alpha: 'alfa' };
+      const normalized = aliases[status] || status;
+      return ['hadir', 'terlambat', 'izin', 'sakit', 'alfa'].includes(normalized) ? normalized : null;
+    }
+
+    function getCSVValue(record, aliases) {
+      for (const alias of aliases) {
+        const key = normalizeCSVHeader(alias);
+        if (record[key]) return record[key];
+      }
+      return '';
+    }
+
+    function openImportAbsensiFile() {
+      document.getElementById('importAbsensiInput').click();
+    }
+
+    async function importAbsensiCSV(file) {
+      if (!file) return;
+
+      const btn = document.getElementById('importAbsensiBtn');
+      setLoading(btn, true);
+
+      try {
+        const text = await file.text();
+        const rows = parseCSV(text.replace(/^\uFEFF/, ''));
+        if (rows.length < 2) {
+          showToast('CSV kosong atau tidak memiliki data', 'error');
+          return;
+        }
+
+        const headers = rows[0].map(normalizeCSVHeader);
+        const records = rows.slice(1).map(row => {
+          const record = {};
+          headers.forEach((header, idx) => { record[header] = row[idx] || ''; });
+          return record;
+        });
+
+        const { data: gurus, error: guruError } = await sb
+          .from('profiles')
+          .select('id, full_name, nip')
+          .eq('role', 'guru');
+        if (guruError) throw guruError;
+
+        const guruByNip = new Map();
+        const guruByName = new Map();
+        (gurus || []).forEach(guru => {
+          if (guru.nip) guruByNip.set(guru.nip.trim().toLowerCase(), guru);
+          guruByName.set(guru.full_name.trim().toLowerCase(), guru);
+        });
+
+        const payloads = [];
+        const skipped = [];
+        records.forEach((record, index) => {
+          const rowNo = index + 2;
+          const nip = getCSVValue(record, ['NIP']).trim().toLowerCase();
+          const nama = getCSVValue(record, ['Nama', 'Nama Guru']).trim().toLowerCase();
+          const guru = (nip && guruByNip.get(nip)) || (nama && guruByName.get(nama));
+          const date = normalizeImportDate(getCSVValue(record, ['Tanggal', 'Date']));
+          const status = normalizeImportStatus(getCSVValue(record, ['Status']));
+          const checkIn = normalizeImportTime(getCSVValue(record, ['Jam Masuk', 'Check In', 'Check In Time']));
+          const checkOut = normalizeImportTime(getCSVValue(record, ['Jam Pulang', 'Check Out', 'Check Out Time']));
+          const notes = getCSVValue(record, ['Catatan', 'Notes']).trim();
+
+          if (!guru) { skipped.push(`baris ${rowNo}: guru tidak ditemukan`); return; }
+          if (!date) { skipped.push(`baris ${rowNo}: tanggal tidak valid`); return; }
+          if (!status) { skipped.push(`baris ${rowNo}: status tidak valid`); return; }
+
+          payloads.push({
+            user_id: guru.id,
+            date,
+            check_in_time: checkIn,
+            check_out_time: checkOut,
+            status,
+            notes: notes || null
+          });
+        });
+
+        if (payloads.length === 0) {
+          showToast(`Tidak ada data valid untuk diimport. ${skipped[0] || ''}`, 'error');
+          return;
+        }
+
+        const { error } = await sb.from('attendance').upsert(payloads, { onConflict: 'user_id,date' });
+        if (error) throw error;
+
+        await loadAbsensi();
+        await loadDashboardStats();
+        showToast(`Import berhasil: ${payloads.length} data${skipped.length ? `, ${skipped.length} dilewati` : ''}`);
+      } catch (err) {
+        showToast('Gagal import CSV: ' + err.message, 'error');
+      } finally {
+        setLoading(btn, false, 'Import CSV');
+        document.getElementById('importAbsensiInput').value = '';
+      }
+    }
+
+
     function openEditAbsensi(id) {
       const item = allAbsensiData.find(a => a.id === id);
       if (!item) return;
@@ -653,7 +825,7 @@
 
     function exportAbsensiCSV() {
       if (allAbsensiData.length === 0) { showToast('Tidak ada data', 'warning'); return; }
-      const headers = ['Nama', 'NIP', 'Mata Pelajaran', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Status'];
+      const headers = ['Nama', 'NIP', 'Mata Pelajaran', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Status', 'Catatan'];
       const rows = allAbsensiData.map(item => [
         item.profiles.full_name,
         item.profiles.nip || '',
@@ -661,9 +833,10 @@
         item.date,
         item.check_in_time ? formatTime(item.check_in_time) : '',
         item.check_out_time ? formatTime(item.check_out_time) : '',
-        item.status
+        item.status,
+        item.notes || ''
       ]);
-      const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+      const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1167,6 +1340,10 @@
         { enableHighAccuracy: true }
       );
     }
+
+    document.getElementById('importAbsensiInput').addEventListener('change', (event) => {
+      importAbsensiCSV(event.target.files[0]);
+    });
 
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', async () => {
