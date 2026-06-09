@@ -64,7 +64,8 @@
         </div>
         <div>
           <label class="text-xs font-medium text-slate-500 block mb-1">Email *</label>
-          <input type="email" id="guruEmail" class="input-field" placeholder="ahmad@sekolah.sch.id" />
+          <input type="email" id="guruEmail" class="input-field" placeholder="ahmad@mitakbr.sch.id" />
+          <p class="text-[11px] text-slate-400 mt-1">Email harus berakhiran .sch.id, contoh ahmad@mitakbr.sch.id.</p>
         </div>
         <div>
           <label class="text-xs font-medium text-slate-500 block mb-1">Password (min. 6 karakter)</label>
@@ -1219,8 +1220,11 @@
           if (!email || !password || password.length < 6) {
             throw new Error('Email dan password (min 6 karakter) wajib untuk guru baru');
           }
+          if (!isSchoolEmail(email)) {
+            throw new Error('Email harus menggunakan domain sekolah berakhiran .sch.id, contoh ahmad@mitakbr.sch.id.');
+          }
 
-          const payload = { email, password, name, role, nip, subject, phone, isActive };
+          const payload = { email: email.toLowerCase(), password, name, role, nip, subject, phone, isActive };
           const { data: { session } } = await sb.auth.getSession();
           if (!session?.access_token) throw new Error('Sesi admin tidak valid, silakan login ulang.');
 
@@ -1234,7 +1238,7 @@
                 'Authorization': `Bearer ${session.access_token}`,
               },
               body: JSON.stringify({
-                email,
+                email: payload.email,
                 password,
                 full_name: name,
                 role,

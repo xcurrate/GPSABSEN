@@ -1,3 +1,7 @@
+function isSchoolEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.sch\.id$/i.test(String(email || '').trim());
+}
+
 function parseJwt(token) {
   const payload = token.split('.')[1];
   return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
@@ -12,6 +16,7 @@ export default async function handler(req, res) {
 
     const { email, password, full_name, role = 'guru', nip = null, subject = null, phone = null, is_active = true } = req.body || {};
     if (!email || !password || !full_name) return res.status(400).json({ error: 'email, password, full_name wajib diisi' });
+    if (!isSchoolEmail(email)) return res.status(400).json({ error: 'Email harus menggunakan domain sekolah berakhiran .sch.id, contoh nama@mitakbr.sch.id.' });
 
     const projectUrl = process.env.SUPABASE_URL || 'https://sbxtfqidotarniglzban.supabase.co';
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -23,9 +28,10 @@ export default async function handler(req, res) {
     const adminData = await adminCheck.json();
     if (!adminCheck.ok || adminData[0]?.role !== 'admin') return res.status(403).json({ error: 'Hanya admin yang diizinkan' });
 
+    const normalizedEmail = email.trim().toLowerCase();
     const createRes = await fetch(`${projectUrl}/auth/v1/admin/users`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', apikey: serviceRole, Authorization: `Bearer ${serviceRole}` },
-      body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { full_name, role, nip, subject, phone, is_active } }),
+      body: JSON.stringify({ email: normalizedEmail, password, email_confirm: true, user_metadata: { full_name, role, nip, subject, phone, is_active } }),
     });
     const createData = await createRes.json();
     if (!createRes.ok) return res.status(createRes.status).json({ error: createData?.msg || createData?.message || 'Gagal membuat user baru' });
