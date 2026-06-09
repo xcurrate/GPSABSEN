@@ -33,6 +33,7 @@
     .btn-red:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
     .btn-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
     .status-hadir { background: #d1fae5; color: #065f46; }
+    .status-terlambat { background: #ffedd5; color: #9a3412; }
     .status-izin  { background: #dbeafe; color: #1e40af; }
     .status-sakit { background: #fef3c7; color: #92400e; }
     .status-alfa  { background: #fee2e2; color: #991b1b; }
@@ -231,6 +232,7 @@
   <div class="bg-white border-b border-slate-100 sticky top-14 z-30">
     <div class="max-w-3xl mx-auto px-4 flex gap-1 py-2 overflow-x-auto scrollbar-hide">
       <button onclick="switchTab('absensi')" id="tab-absensi" class="tab-btn active whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">📋 Absensi</button>
+      <button onclick="switchTab('rekap')" id="tab-rekap" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">📊 Rekap</button>
       <button onclick="switchTab('guru')" id="tab-guru" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">👨‍🏫 Guru</button>
       <button onclick="switchTab('agenda')" id="tab-agenda" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">📅 Agenda</button>
       <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold text-slate-600">⚙️ Pengaturan</button>
@@ -278,19 +280,94 @@
             <input type="text" id="absenSearchName" class="input-field" placeholder="Cari nama..." />
           </div>
         </div>
-        <div class="flex gap-2 mt-3">
+        <div class="flex flex-wrap gap-2 mt-3">
           <button onclick="loadAbsensi()" class="flex-1 btn-green text-white py-2.5 rounded-xl text-sm font-medium">Cari</button>
+          <button id="importAbsensiBtn" onclick="openImportAbsensiFile()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0-12l-4 4m4-4l4 4M4 20h16"/></svg>
+            Import CSV
+          </button>
+          <input type="file" id="importAbsensiInput" class="hidden" accept=".csv,text/csv" />
           <button onclick="exportAbsensiCSV()" class="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-700">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             CSV
           </button>
         </div>
+        <p class="text-xs text-slate-400 mt-2">Format import: Nama/NIP, Tanggal, Jam Masuk, Jam Pulang, Status, Catatan. Jika data guru dan tanggal sudah ada, data akan diperbarui.</p>
       </div>
 
       <!-- Tabel Absensi -->
       <div class="card overflow-hidden">
         <div id="absensiTable" class="divide-y divide-slate-50">
           <div class="p-8 text-center text-sm text-slate-400">Memuat data...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAB REKAP ===== -->
+    <div id="panel-rekap" class="space-y-4 hidden">
+      <div class="card p-4">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="font-semibold text-slate-700">Rekap Kehadiran Guru</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Ringkasan jumlah hadir, terlambat, izin, sakit, dan alfa per guru dalam rentang tanggal.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <div class="flex-1 min-w-32">
+            <label class="text-xs text-slate-400 block mb-1">Dari Tanggal</label>
+            <input type="date" id="rekapFromDate" class="input-field" />
+          </div>
+          <div class="flex-1 min-w-32">
+            <label class="text-xs text-slate-400 block mb-1">Sampai Tanggal</label>
+            <input type="date" id="rekapToDate" class="input-field" />
+          </div>
+          <div class="flex-1 min-w-32">
+            <label class="text-xs text-slate-400 block mb-1">Nama Guru</label>
+            <input type="text" id="rekapSearchName" class="input-field" placeholder="Cari nama..." />
+          </div>
+        </div>
+        <div class="flex gap-2 mt-3">
+          <button onclick="loadRekapGuru()" class="flex-1 btn-green text-white py-2.5 rounded-xl text-sm font-medium">Tampilkan Rekap</button>
+          <button onclick="exportRekapGuruCSV()" class="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
+        <div class="card p-4 text-center">
+          <p id="rekapTotalHadir" class="text-2xl font-bold text-emerald-600">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Hadir</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="rekapTotalTerlambat" class="text-2xl font-bold text-orange-600">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Terlambat</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="rekapTotalIzin" class="text-2xl font-bold text-blue-600">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Izin</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="rekapTotalSakit" class="text-2xl font-bold text-amber-600">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Sakit</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="rekapTotalAlfa" class="text-2xl font-bold text-red-500">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Alfa</p>
+        </div>
+        <div class="card p-4 text-center">
+          <p id="rekapTotalCatatan" class="text-2xl font-bold text-slate-700">—</p>
+          <p class="text-xs text-slate-400 mt-0.5">Total Data</p>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-100">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rekap Per Guru</p>
+        </div>
+        <div id="rekapGuruTable" class="divide-y divide-slate-50">
+          <div class="p-8 text-center text-sm text-slate-400">Pilih rentang tanggal dan klik Tampilkan Rekap</div>
         </div>
       </div>
     </div>
@@ -418,6 +495,7 @@
   <script>
     let currentAdmin = null;
     let allAbsensiData = [];
+    let rekapGuruData = [];
     let allGuruData = [];
     let allAgendaData = [];
     let editingGuruId = null;
@@ -425,13 +503,14 @@
 
     // ===== TAB SWITCHING =====
     function switchTab(tab) {
-      ['absensi','guru','agenda','settings'].forEach(t => {
+      ['absensi','rekap','guru','agenda','settings'].forEach(t => {
         document.getElementById(`panel-${t}`).classList.add('hidden');
         document.getElementById(`tab-${t}`).classList.remove('active');
       });
       document.getElementById(`panel-${tab}`).classList.remove('hidden');
       document.getElementById(`tab-${tab}`).classList.add('active');
 
+      if (tab === 'rekap') loadRekapGuru();
       if (tab === 'guru') loadGuru();
       if (tab === 'agenda') loadAgenda();
       if (tab === 'settings') loadSettings();
@@ -465,6 +544,8 @@
       const now = new Date();
       const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      document.getElementById('rekapFromDate').value = firstDay;
+      document.getElementById('rekapToDate').value = lastDay;
       document.getElementById('agendaFrom').value = firstDay;
       document.getElementById('agendaTo').value = lastDay;
 
@@ -506,7 +587,7 @@
         return;
       }
 
-      const statusClass = { hadir: 'status-hadir', terlambat: 'bg-orange-100 text-orange-700', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
+      const statusClass = { hadir: 'status-hadir', terlambat: 'status-terlambat', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
 
       container.innerHTML = allAbsensiData.map(item => `
         <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 gap-2">
@@ -531,6 +612,172 @@
           </div>
         </div>
       `).join('');
+    }
+
+
+    function csvEscape(value) {
+      const str = String(value ?? '');
+      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let field = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            field += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          row.push(field.trim());
+          field = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && next === '\n') i++;
+          row.push(field.trim());
+          if (row.some(cell => cell !== '')) rows.push(row);
+          row = [];
+          field = '';
+        } else {
+          field += char;
+        }
+      }
+
+      row.push(field.trim());
+      if (row.some(cell => cell !== '')) rows.push(row);
+      return rows;
+    }
+
+    function normalizeCSVHeader(header) {
+      return header.toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+
+    function normalizeImportDate(value) {
+      const clean = String(value || '').trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+
+      const slashMatch = clean.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+      if (!slashMatch) return null;
+
+      const [, day, month, year] = slashMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+
+    function normalizeImportTime(value) {
+      if (!value) return null;
+      const clean = String(value).trim();
+      const match = clean.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      if (!match) return null;
+
+      const [, hour, minute, second = '00'] = match;
+      return `${hour.padStart(2, '0')}:${minute}:${second}`;
+    }
+
+    function normalizeImportStatus(value) {
+      const status = String(value || '').trim().toLowerCase();
+      const aliases = { telat: 'terlambat', terlambat: 'terlambat', alpha: 'alfa' };
+      const normalized = aliases[status] || status;
+      return ['hadir', 'terlambat', 'izin', 'sakit', 'alfa'].includes(normalized) ? normalized : null;
+    }
+
+    function getCSVValue(record, aliases) {
+      for (const alias of aliases) {
+        const key = normalizeCSVHeader(alias);
+        if (record[key]) return record[key];
+      }
+      return '';
+    }
+
+    function openImportAbsensiFile() {
+      document.getElementById('importAbsensiInput').click();
+    }
+
+    async function importAbsensiCSV(file) {
+      if (!file) return;
+
+      const btn = document.getElementById('importAbsensiBtn');
+      setLoading(btn, true);
+
+      try {
+        const text = await file.text();
+        const rows = parseCSV(text.replace(/^\uFEFF/, ''));
+        if (rows.length < 2) {
+          showToast('CSV kosong atau tidak memiliki data', 'error');
+          return;
+        }
+
+        const headers = rows[0].map(normalizeCSVHeader);
+        const records = rows.slice(1).map(row => {
+          const record = {};
+          headers.forEach((header, idx) => { record[header] = row[idx] || ''; });
+          return record;
+        });
+
+        const { data: gurus, error: guruError } = await sb
+          .from('profiles')
+          .select('id, full_name, nip')
+          .eq('role', 'guru');
+        if (guruError) throw guruError;
+
+        const guruByNip = new Map();
+        const guruByName = new Map();
+        (gurus || []).forEach(guru => {
+          if (guru.nip) guruByNip.set(guru.nip.trim().toLowerCase(), guru);
+          guruByName.set(guru.full_name.trim().toLowerCase(), guru);
+        });
+
+        const payloads = [];
+        const skipped = [];
+        records.forEach((record, index) => {
+          const rowNo = index + 2;
+          const nip = getCSVValue(record, ['NIP']).trim().toLowerCase();
+          const nama = getCSVValue(record, ['Nama', 'Nama Guru']).trim().toLowerCase();
+          const guru = (nip && guruByNip.get(nip)) || (nama && guruByName.get(nama));
+          const date = normalizeImportDate(getCSVValue(record, ['Tanggal', 'Date']));
+          const status = normalizeImportStatus(getCSVValue(record, ['Status']));
+          const checkIn = normalizeImportTime(getCSVValue(record, ['Jam Masuk', 'Check In', 'Check In Time']));
+          const checkOut = normalizeImportTime(getCSVValue(record, ['Jam Pulang', 'Check Out', 'Check Out Time']));
+          const notes = getCSVValue(record, ['Catatan', 'Notes']).trim();
+
+          if (!guru) { skipped.push(`baris ${rowNo}: guru tidak ditemukan`); return; }
+          if (!date) { skipped.push(`baris ${rowNo}: tanggal tidak valid`); return; }
+          if (!status) { skipped.push(`baris ${rowNo}: status tidak valid`); return; }
+
+          payloads.push({
+            user_id: guru.id,
+            date,
+            check_in_time: checkIn,
+            check_out_time: checkOut,
+            status,
+            notes: notes || null
+          });
+        });
+
+        if (payloads.length === 0) {
+          showToast(`Tidak ada data valid untuk diimport. ${skipped[0] || ''}`, 'error');
+          return;
+        }
+
+        const { error } = await sb.from('attendance').upsert(payloads, { onConflict: 'user_id,date' });
+        if (error) throw error;
+
+        await loadAbsensi();
+        await loadDashboardStats();
+        showToast(`Import berhasil: ${payloads.length} data${skipped.length ? `, ${skipped.length} dilewati` : ''}`);
+      } catch (err) {
+        showToast('Gagal import CSV: ' + err.message, 'error');
+      } finally {
+        setLoading(btn, false, 'Import CSV');
+        document.getElementById('importAbsensiInput').value = '';
+      }
     }
 
 
@@ -578,7 +825,7 @@
 
     function exportAbsensiCSV() {
       if (allAbsensiData.length === 0) { showToast('Tidak ada data', 'warning'); return; }
-      const headers = ['Nama', 'NIP', 'Mata Pelajaran', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Status'];
+      const headers = ['Nama', 'NIP', 'Mata Pelajaran', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Status', 'Catatan'];
       const rows = allAbsensiData.map(item => [
         item.profiles.full_name,
         item.profiles.nip || '',
@@ -586,9 +833,10 @@
         item.date,
         item.check_in_time ? formatTime(item.check_in_time) : '',
         item.check_out_time ? formatTime(item.check_out_time) : '',
-        item.status
+        item.status,
+        item.notes || ''
       ]);
-      const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+      const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -611,6 +859,154 @@
       document.getElementById('totalIzin').textContent = data.filter(d => d.status === 'izin' || d.status === 'sakit').length;
       document.getElementById('totalAlfa').textContent = data.filter(d => d.status === 'alfa').length;
       document.getElementById('totalGuru').textContent = (totalGuru.data || []).length;
+    }
+
+
+    // ===== REKAP GURU =====
+    function createEmptyRekapRow(guru) {
+      return {
+        id: guru.id,
+        full_name: guru.full_name,
+        nip: guru.nip || '',
+        subject: guru.subject || '',
+        hadir: 0,
+        terlambat: 0,
+        izin: 0,
+        sakit: 0,
+        alfa: 0,
+        total: 0
+      };
+    }
+
+    async function loadRekapGuru() {
+      const from = document.getElementById('rekapFromDate').value;
+      const to = document.getElementById('rekapToDate').value;
+      const search = document.getElementById('rekapSearchName').value.toLowerCase();
+      const table = document.getElementById('rekapGuruTable');
+
+      if (!from || !to) {
+        showToast('Rentang tanggal rekap wajib diisi', 'error');
+        return;
+      }
+
+      table.innerHTML = '<div class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>';
+
+      const [guruRes, attendanceRes] = await Promise.all([
+        sb.from('profiles')
+          .select('id, full_name, nip, subject, is_active')
+          .eq('role', 'guru')
+          .order('full_name'),
+        sb.from('attendance')
+          .select('user_id, status')
+          .gte('date', from)
+          .lte('date', to)
+      ]);
+
+      if (guruRes.error) { showToast('Gagal memuat data guru', 'error'); return; }
+      if (attendanceRes.error) { showToast('Gagal memuat data rekap', 'error'); return; }
+
+      const guruRows = (guruRes.data || []).filter(guru =>
+        guru.is_active !== false && (!search || guru.full_name.toLowerCase().includes(search))
+      );
+      const rekapMap = new Map(guruRows.map(guru => [guru.id, createEmptyRekapRow(guru)]));
+
+      (attendanceRes.data || []).forEach(item => {
+        const row = rekapMap.get(item.user_id);
+        if (!row || !['hadir', 'terlambat', 'izin', 'sakit', 'alfa'].includes(item.status)) return;
+        row[item.status] += 1;
+        row.total += 1;
+      });
+
+      rekapGuruData = Array.from(rekapMap.values()).sort((a, b) =>
+        b.total - a.total || a.full_name.localeCompare(b.full_name)
+      );
+
+      renderRekapGuruSummary();
+      renderRekapGuruTable();
+    }
+
+    function renderRekapGuruSummary() {
+      const totals = rekapGuruData.reduce((acc, row) => {
+        ['hadir', 'terlambat', 'izin', 'sakit', 'alfa', 'total'].forEach(key => {
+          acc[key] += row[key];
+        });
+        return acc;
+      }, { hadir: 0, terlambat: 0, izin: 0, sakit: 0, alfa: 0, total: 0 });
+
+      document.getElementById('rekapTotalHadir').textContent = totals.hadir;
+      document.getElementById('rekapTotalTerlambat').textContent = totals.terlambat;
+      document.getElementById('rekapTotalIzin').textContent = totals.izin;
+      document.getElementById('rekapTotalSakit').textContent = totals.sakit;
+      document.getElementById('rekapTotalAlfa').textContent = totals.alfa;
+      document.getElementById('rekapTotalCatatan').textContent = totals.total;
+    }
+
+    function renderRekapGuruTable() {
+      const table = document.getElementById('rekapGuruTable');
+      if (rekapGuruData.length === 0) {
+        table.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">Tidak ada guru yang cocok dengan filter</div>';
+        return;
+      }
+
+      table.innerHTML = rekapGuruData.map(row => {
+        const hadirTotal = row.hadir + row.terlambat;
+        const persentase = row.total ? Math.round((hadirTotal / row.total) * 100) : 0;
+        return `
+          <div class="px-4 py-3 hover:bg-slate-50">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-slate-700 truncate">${row.full_name}</p>
+                <p class="text-xs text-slate-400">${row.nip || 'NIP belum diisi'}${row.subject ? ' · ' + row.subject : ''}</p>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <p class="text-sm font-bold text-slate-700">${persentase}%</p>
+                <p class="text-xs text-slate-400">kehadiran</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-5 gap-2 text-center">
+              <div class="rounded-xl bg-emerald-50 p-2"><p class="text-sm font-bold text-emerald-600">${row.hadir}</p><p class="text-[10px] text-emerald-500">Hadir</p></div>
+              <div class="rounded-xl bg-orange-50 p-2"><p class="text-sm font-bold text-orange-600">${row.terlambat}</p><p class="text-[10px] text-orange-500">Telat</p></div>
+              <div class="rounded-xl bg-blue-50 p-2"><p class="text-sm font-bold text-blue-600">${row.izin}</p><p class="text-[10px] text-blue-500">Izin</p></div>
+              <div class="rounded-xl bg-amber-50 p-2"><p class="text-sm font-bold text-amber-600">${row.sakit}</p><p class="text-[10px] text-amber-500">Sakit</p></div>
+              <div class="rounded-xl bg-red-50 p-2"><p class="text-sm font-bold text-red-500">${row.alfa}</p><p class="text-[10px] text-red-400">Alfa</p></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function exportRekapGuruCSV() {
+      if (rekapGuruData.length === 0) { showToast('Tidak ada data rekap untuk diexport', 'warning'); return; }
+
+      const headers = ['Nama', 'NIP', 'Mata Pelajaran', 'Hadir', 'Terlambat', 'Izin', 'Sakit', 'Alfa', 'Total Data', 'Persentase Kehadiran'];
+      const rows = rekapGuruData.map(row => {
+        const hadirTotal = row.hadir + row.terlambat;
+        const persentase = row.total ? Math.round((hadirTotal / row.total) * 100) : 0;
+        return [
+          row.full_name,
+          row.nip,
+          row.subject,
+          row.hadir,
+          row.terlambat,
+          row.izin,
+          row.sakit,
+          row.alfa,
+          row.total,
+          `${persentase}%`
+        ];
+      });
+
+      const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const from = document.getElementById('rekapFromDate').value;
+      const to = document.getElementById('rekapToDate').value;
+      a.href = url;
+      a.download = `rekap-guru-${from}-sampai-${to}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('CSV rekap guru berhasil diexport');
     }
 
     // ===== GURU =====
@@ -944,6 +1340,10 @@
         { enableHighAccuracy: true }
       );
     }
+
+    document.getElementById('importAbsensiInput').addEventListener('change', (event) => {
+      importAbsensiCSV(event.target.files[0]);
+    });
 
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', async () => {
