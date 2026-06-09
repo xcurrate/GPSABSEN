@@ -209,6 +209,78 @@ CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON public.profiles
 CREATE TRIGGER schedules_updated_at BEFORE UPDATE ON public.schedules
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
+
+-- ============================================================
+-- FUNCTION: import absensi oleh admin tanpa service role frontend
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.import_attendance_as_admin(attendance_rows JSONB)
+RETURNS INTEGER AS $$
+DECLARE
+  imported_count INTEGER;
+BEGIN
+  IF auth.uid() IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  ) THEN
+    RAISE EXCEPTION 'Hanya admin yang diizinkan import absensi'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF attendance_rows IS NULL OR jsonb_typeof(attendance_rows) <> 'array' THEN
+    RAISE EXCEPTION 'attendance_rows wajib berupa array';
+  END IF;
+
+  IF jsonb_array_length(attendance_rows) = 0 THEN
+    RAISE EXCEPTION 'Tidak ada data absensi untuk diimport';
+  END IF;
+
+  IF jsonb_array_length(attendance_rows) > 1000 THEN
+    RAISE EXCEPTION 'Maksimal 1000 baris per import';
+  END IF;
+
+  WITH parsed_rows AS (
+    SELECT *
+    FROM jsonb_to_recordset(attendance_rows) AS row_data(
+      user_id UUID,
+      date DATE,
+      check_in_time TIME,
+      check_out_time TIME,
+      status TEXT,
+      notes TEXT
+    )
+  ), upserted_rows AS (
+    INSERT INTO public.attendance (
+      user_id,
+      date,
+      check_in_time,
+      check_out_time,
+      status,
+      notes
+    )
+    SELECT
+      user_id,
+      date,
+      check_in_time,
+      check_out_time,
+      COALESCE(status, 'hadir'),
+      notes
+    FROM parsed_rows
+    ON CONFLICT (user_id, date) DO UPDATE SET
+      check_in_time = EXCLUDED.check_in_time,
+      check_out_time = EXCLUDED.check_out_time,
+      status = EXCLUDED.status,
+      notes = EXCLUDED.notes
+    RETURNING 1
+  )
+  SELECT COUNT(*) INTO imported_count FROM upserted_rows;
+
+  RETURN imported_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION public.import_attendance_as_admin(JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.import_attendance_as_admin(JSONB) TO authenticated;
+
 -- ============================================================
 -- SEED DATA: Settings default
 -- ============================================================
