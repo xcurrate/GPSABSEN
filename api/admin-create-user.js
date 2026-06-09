@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { full_name, role, nip, subject, phone, is_active } }),
     });
     const createData = await createRes.json();
-    if (!createRes.ok) return res.status(createRes.status).json({ error: createData?.msg || createData?.message || 'Gagal membuat user' });
+    if (!createRes.ok) return res.status(createRes.status).json({ error: createData?.msg || createData?.message || 'Gagal membuat user baru' });
 
     await fetch(`${projectUrl}/rest/v1/profiles`, {
       method: 'POST',
