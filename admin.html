@@ -617,7 +617,7 @@
 
     function csvEscape(value) {
       const str = String(value ?? '');
-      return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+      return /["\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
     }
 
     function parseCSV(text) {
@@ -1092,14 +1092,18 @@
       document.getElementById('modalGuruTitle').textContent = 'Tambah Guru Baru';
       document.getElementById('guruId').value = '';
       document.getElementById('guruName').value = '';
-      document.getElementById('guruEmail').value = '';
       document.getElementById('guruPassword').value = '';
       document.getElementById('guruNip').value = '';
       document.getElementById('guruSubject').value = '';
       document.getElementById('guruPhone').value = '';
       document.getElementById('guruRole').value = 'guru';
       document.getElementById('guruActive').value = 'true';
-      document.getElementById('guruEmail').disabled = false;
+
+      const guruEmailEl = document.getElementById('guruEmail');
+      guruEmailEl.type = 'email';
+      guruEmailEl.value = '';
+      guruEmailEl.placeholder = 'ahmad@sekolah.sch.id';
+      guruEmailEl.disabled = false;
       openModal('modalGuru');
     }
 
@@ -1110,14 +1114,17 @@
       document.getElementById('modalGuruTitle').textContent = 'Edit Data Guru';
       document.getElementById('guruId').value = id;
       document.getElementById('guruName').value = guru.full_name;
-      document.getElementById('guruEmail').value = '(email tidak dapat diubah)';
-      document.getElementById('guruEmail').disabled = true;
       document.getElementById('guruPassword').value = '';
       document.getElementById('guruNip').value = guru.nip || '';
       document.getElementById('guruSubject').value = guru.subject || '';
       document.getElementById('guruPhone').value = guru.phone || '';
       document.getElementById('guruRole').value = guru.role;
       document.getElementById('guruActive').value = String(guru.is_active);
+      
+      const guruEmailEl = document.getElementById('guruEmail');
+      guruEmailEl.type = 'text';
+      guruEmailEl.value = '(email tidak dapat diubah)';
+      guruEmailEl.disabled = true;
       openModal('modalGuru');
     }
 
