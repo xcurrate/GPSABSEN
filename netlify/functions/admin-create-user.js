@@ -8,8 +8,11 @@ exports.handler = async (event) => {
     const userId = parseJwt(token).sub;
 
     const { email, password, full_name, role = 'guru', nip = null, subject = null, phone = null, is_active = true } = JSON.parse(event.body || '{}');
-    const projectUrl = process.env.SUPABASE_URL;
+    const projectUrl = process.env.SUPABASE_URL || 'https://sbxtfqidotarniglzban.supabase.co';
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceRole) {
+      return { statusCode: 500, body: JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY belum tersedia. Fallback signup publik akan dicoba dari browser.' }) };
+    }
 
     const adminCheck = await fetch(`${projectUrl}/rest/v1/profiles?select=role&id=eq.${userId}`, { headers: { apikey: serviceRole, Authorization: `Bearer ${serviceRole}` } });
     const adminData = await adminCheck.json();
@@ -17,7 +20,7 @@ exports.handler = async (event) => {
 
     const createRes = await fetch(`${projectUrl}/auth/v1/admin/users`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', apikey: serviceRole, Authorization: `Bearer ${serviceRole}` },
-      body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { full_name, role } }),
+      body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { full_name, role, nip, subject, phone, is_active } }),
     });
     const createData = await createRes.json();
     if (!createRes.ok) return { statusCode: createRes.status, body: JSON.stringify({ error: createData?.msg || createData?.message || 'Gagal membuat user' }) };
