@@ -98,6 +98,16 @@ CREATE POLICY "Users can update own profile"
   TO authenticated
   USING (auth.uid() = id);
 
+CREATE POLICY "Admin can update profiles"
+  ON public.profiles FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 CREATE POLICY "Admin can insert profiles"
   ON public.profiles FOR INSERT
   TO authenticated
@@ -176,11 +186,15 @@ CREATE POLICY "Admin can manage schedules"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, role)
+  INSERT INTO public.profiles (id, full_name, role, nip, subject, phone, is_active)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'guru')
+    COALESCE(NEW.raw_user_meta_data->>'role', 'guru'),
+    NULLIF(NEW.raw_user_meta_data->>'nip', ''),
+    NULLIF(NEW.raw_user_meta_data->>'subject', ''),
+    NULLIF(NEW.raw_user_meta_data->>'phone', ''),
+    COALESCE((NEW.raw_user_meta_data->>'is_active')::BOOLEAN, true)
   );
   RETURN NEW;
 END;

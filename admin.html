@@ -1121,6 +1121,76 @@
       openModal('modalGuru');
     }
 
+    function createIsolatedSupabaseClient() {
+      return supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+          storage: {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+          },
+        },
+      });
+    }
+
+    function isAdminCreateConfigError(message) {
+      const normalized = String(message || '').toLowerCase();
+      return normalized.includes('supabase_service_role_key') ||
+        normalized.includes('service role') ||
+        normalized.includes('failed to parse url from undefined') ||
+        normalized.includes('failed to fetch') ||
+        normalized.includes('endpoint admin-create-user tidak tersedia');
+    }
+
+    async function createGuruWithPublicSignUp({ email, password, name, role, nip, subject, phone, isActive }) {
+      const tempClient = createIsolatedSupabaseClient();
+      const { data, error } = await tempClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role,
+            nip: nip || null,
+            subject: subject || null,
+            phone: phone || null,
+            is_active: isActive,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      const newUserId = data?.user?.id;
+      if (!newUserId) throw new Error('Gagal mendapatkan ID user baru dari Supabase.');
+
+      const { error: profileError } = await sb.from('profiles').upsert({
+        id: newUserId,
+        full_name: name,
+        nip: nip || null,
+        subject: subject || null,
+        phone: phone || null,
+        role,
+        is_active: isActive,
+      }, { onConflict: 'id' });
+
+      const warnings = [];
+      if (!data?.session) {
+        warnings.push('Email mungkin perlu dikonfirmasi sesuai pengaturan Auth Supabase.');
+      }
+      if (profileError) {
+        warnings.push(`User auth berhasil dibuat, tetapi detail profil tambahan belum tersimpan: ${profileError.message}`);
+      }
+
+      return {
+        id: newUserId,
+        warning: warnings.length ? ` ${warnings.join(' ')}` : '',
+      };
+    }
+
     async function saveGuru() {
       const btn = document.getElementById('saveGuruBtn');
       const name = document.getElementById('guruName').value.trim();
@@ -1143,38 +1213,46 @@
             throw new Error('Email dan password (min 6 karakter) wajib untuk guru baru');
           }
 
+          const payload = { email, password, name, role, nip, subject, phone, isActive };
           const { data: { session } } = await sb.auth.getSession();
           if (!session?.access_token) throw new Error('Sesi admin tidak valid, silakan login ulang.');
 
           const adminCreateEndpoint = getAdminFunctionEndpoint('admin-create-user');
-          const createRes = await fetch(adminCreateEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              email,
-              password,
-              full_name: name,
-              role,
-              nip,
-              subject,
-              phone,
-              is_active: isActive,
-            }),
-          });
+          let createData = null;
+          try {
+            const createRes = await fetch(adminCreateEndpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                email,
+                password,
+                full_name: name,
+                role,
+                nip,
+                subject,
+                phone,
+                is_active: isActive,
+              }),
+            });
 
-          const createData = await createRes.json();
-          if (!createRes.ok) {
-            const msg = createData?.error || createData?.message || JSON.stringify(createData);
-            throw new Error(msg);
+            createData = await createRes.json().catch(() => ({}));
+            if (!createRes.ok) {
+              const msg = createData?.error || createData?.message ||
+                (Object.keys(createData).length === 0 ? 'Endpoint admin-create-user tidak tersedia' : JSON.stringify(createData));
+              throw new Error(msg);
+            }
+          } catch (createErr) {
+            if (!isAdminCreateConfigError(createErr.message)) throw createErr;
+            createData = await createGuruWithPublicSignUp(payload);
           }
 
           const newUserId = createData.id;
           if (!newUserId) throw new Error('Gagal mendapatkan ID user baru dari Supabase.');
 
-          showToast(`✓ Guru ${name} berhasil ditambahkan`);
+          showToast(`✓ Guru ${name} berhasil ditambahkan${createData.warning || ''}`);
 
         } else {
           // ── EDIT GURU ─────────────────────────────────────────
