@@ -103,6 +103,53 @@
     </div>
   </div>
 
+
+  <!-- Modal Edit Absensi -->
+  <div id="modalAbsensi" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-overlay">
+    <div class="modal-box bg-white rounded-2xl w-full max-w-sm p-6">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h3 class="font-bold text-slate-800">Edit Absensi Guru</h3>
+          <p id="editAbsensiTeacher" class="text-xs text-slate-400 mt-0.5">Perbarui data kehadiran</p>
+        </div>
+        <button onclick="closeModal('modalAbsensi')" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-3">
+        <input type="hidden" id="editAbsensiId" />
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Tanggal *</label>
+          <input type="date" id="editAbsensiDate" class="input-field" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Jam Masuk</label>
+            <input type="time" id="editCheckIn" class="input-field" />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 block mb-1">Jam Pulang</label>
+            <input type="time" id="editCheckOut" class="input-field" />
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">Status *</label>
+          <select id="editStatus" class="input-field">
+            <option value="hadir">Hadir</option>
+            <option value="terlambat">Terlambat</option>
+            <option value="izin">Izin</option>
+            <option value="sakit">Sakit</option>
+            <option value="alfa">Alfa</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button onclick="closeModal('modalAbsensi')" class="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50">Batal</button>
+        <button id="saveAbsensiBtn" onclick="saveAbsensiEdit()" class="btn-green flex-1 text-white py-2.5 rounded-xl text-sm font-semibold">Simpan</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Tambah/Edit Agenda -->
   <div id="modalAgenda" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-overlay">
     <div class="modal-box bg-white rounded-2xl w-full max-w-sm p-6">
@@ -491,6 +538,7 @@
       const item = allAbsensiData.find(a => a.id === id);
       if (!item) return;
       document.getElementById('editAbsensiId').value = item.id;
+      document.getElementById('editAbsensiTeacher').textContent = item.profiles?.full_name || 'Perbarui data kehadiran';
       document.getElementById('editAbsensiDate').value = item.date || '';
       document.getElementById('editCheckIn').value = item.check_in_time ? item.check_in_time.substring(0,5) : '';
       document.getElementById('editCheckOut').value = item.check_out_time ? item.check_out_time.substring(0,5) : '';
@@ -501,8 +549,12 @@
     async function saveAbsensiEdit() {
       const id = document.getElementById('editAbsensiId').value;
       const btn = document.getElementById('saveAbsensiBtn');
+      const date = document.getElementById('editAbsensiDate').value;
+
+      if (!date) { showToast('Tanggal absensi wajib diisi', 'error'); return; }
+
       const payload = {
-        date: document.getElementById('editAbsensiDate').value || null,
+        date,
         check_in_time: document.getElementById('editCheckIn').value || null,
         check_out_time: document.getElementById('editCheckOut').value || null,
         status: document.getElementById('editStatus').value,
@@ -510,7 +562,7 @@
       setLoading(btn, true);
       const { error } = await sb.from('attendance').update(payload).eq('id', id);
       setLoading(btn, false);
-      if (error) { showToast('Gagal simpan perubahan absensi', 'error'); return; }
+      if (error) { showToast('Gagal simpan perubahan absensi: ' + error.message, 'error'); return; }
       showToast('Perubahan absensi berhasil disimpan');
       closeModal('modalAbsensi');
       await loadAbsensi();
