@@ -700,6 +700,33 @@
       document.getElementById('importAbsensiInput').click();
     }
 
+    function getAdminFunctionEndpoint(functionName) {
+      return window.location.hostname.includes('netlify.app')
+        ? `/.netlify/functions/${functionName}`
+        : `/api/${functionName}`;
+    }
+
+    async function importAttendanceViaAdminFunction(payloads) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session?.access_token) throw new Error('Sesi admin tidak valid, silakan login ulang.');
+
+      const response = await fetch(getAdminFunctionEndpoint('admin-import-attendance'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ attendance: payloads }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result?.error || result?.message || 'Gagal import absensi');
+      }
+
+      return result;
+    }
+
     async function importAbsensiCSV(file) {
       if (!file) return;
 
@@ -766,8 +793,7 @@
           return;
         }
 
-        const { error } = await sb.from('attendance').upsert(payloads, { onConflict: 'user_id,date' });
-        if (error) throw error;
+        await importAttendanceViaAdminFunction(payloads);
 
         await loadAbsensi();
         await loadDashboardStats();
@@ -1110,7 +1136,7 @@
           const { data: { session } } = await sb.auth.getSession();
           if (!session?.access_token) throw new Error('Sesi admin tidak valid, silakan login ulang.');
 
-          const adminCreateEndpoint = window.location.hostname.includes('netlify.app') ? '/.netlify/functions/admin-create-user' : '/api/admin-create-user';
+          const adminCreateEndpoint = getAdminFunctionEndpoint('admin-create-user');
           const createRes = await fetch(adminCreateEndpoint, {
             method: 'POST',
             headers: {
