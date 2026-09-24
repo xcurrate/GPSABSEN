@@ -5,6 +5,7 @@ Aplikasi absensi guru berbasis lokasi GPS, dibangun dengan HTML, CSS, dan JavaSc
 ## Fitur Utama
 
 -   **Absensi Guru**: Guru dapat melakukan check-in dan check-out melalui aplikasi.
+-   **Pengajuan Izin/Sakit**: Guru dapat mengajukan izin atau sakit untuk satu atau beberapa tanggal. Admin meninjau setiap pengajuan; persetujuan otomatis mencatat status pada hari kerja yang belum memiliki absensi tanpa menimpa check-in yang sudah ada.
 -   **Validasi GPS**: Absensi hanya bisa dilakukan jika guru berada dalam radius yang ditentukan dari lokasi sekolah.
 -   **Panel Admin**: Admin memiliki akses ke panel khusus untuk:
     -   Mengelola data guru (tambah, edit, nonaktifkan).
@@ -38,7 +39,7 @@ Aplikasi ini menggunakan [Supabase](https://supabase.com) sebagai backend untuk 
 
 1.  **Clone Repositori**: `git clone https://github.com/xcurrate/GPSABSEN.git`
 2.  **Buat Proyek Supabase**: Daftar atau login ke [Supabase](https://supabase.com) dan buat proyek baru.
-3.  **Skema Database**: Salin dan jalankan query dari `sql/schema.sql` di *SQL Editor* Supabase untuk membuat tabel dan fungsi yang diperlukan.
+3.  **Skema Database**: Salin dan jalankan query dari `sql/schema.sql` di *SQL Editor* Supabase untuk membuat tabel dan fungsi yang diperlukan. Untuk instalasi yang sudah berjalan, jalankan bagian tabel `leave_requests`, kebijakan RLS, dan fungsi persetujuan pengajuan agar fitur ini tersedia.
 4.  **Konfigurasi Supabase**: 
     - Masuk ke *Project Settings* > *API*.
     - Salin `URL` dan `anon (public) key`.

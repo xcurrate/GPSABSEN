@@ -196,6 +196,27 @@
       </button>
     </div>
 
+    <!-- Pengajuan Izin/Sakit: kebutuhan nyata saat guru tidak dapat hadir dan admin perlu bukti alur persetujuan. -->
+    <div class="card p-4 slide-up">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pengajuan Izin / Sakit</p>
+          <p class="text-xs text-slate-400 mt-0.5">Ajukan sebelum atau saat tidak dapat hadir.</p>
+        </div>
+        <span class="text-lg">📝</span>
+      </div>
+      <form id="leaveRequestForm" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-500 block mb-1">Jenis</label><select id="leaveType" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700"><option value="izin">Izin</option><option value="sakit">Sakit</option></select></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Mulai</label><input id="leaveStartDate" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700" required /></div>
+        </div>
+        <div><label class="text-xs text-slate-500 block mb-1">Sampai</label><input id="leaveEndDate" type="date" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700" required /></div>
+        <div><label class="text-xs text-slate-500 block mb-1">Alasan</label><textarea id="leaveReason" rows="2" minlength="5" maxlength="500" required class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700" placeholder="Contoh: menghadiri keperluan keluarga"></textarea></div>
+        <button id="leaveSubmitBtn" type="submit" class="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Kirim Pengajuan</button>
+      </form>
+      <div id="leaveRequestList" class="mt-3 space-y-2"></div>
+    </div>
+
     <!-- Agenda Hari Ini -->
     <div class="card p-4 slide-up">
       <div class="flex items-center justify-between mb-3">
@@ -308,8 +329,12 @@
         loadTodayAttendance(),
         loadAgenda(),
         loadHistory(),
-        loadStats()
+        loadStats(),
+        loadLeaveRequests()
       ]);
+
+      document.getElementById('leaveStartDate').value = getTodayStr();
+      document.getElementById('leaveEndDate').value = getTodayStr();
 
       startGPS();
     }
@@ -343,14 +368,19 @@ function updateAttendanceUI() {
   btnAbsen.disabled = true;
   btnPulang.disabled = true;
 
-  if (todayAttendance) {
+    if (todayAttendance) {
     document.getElementById('checkInTime').textContent =
       todayAttendance.check_in_time ? formatTime(todayAttendance.check_in_time) : '—';
     document.getElementById('checkOutTime').textContent =
       todayAttendance.check_out_time ? formatTime(todayAttendance.check_out_time) : '—';
 
-    badge.className = 'px-2 py-0.5 rounded-full text-xs font-semibold status-badge-hadir';
-    badge.textContent = 'Sudah Hadir';
+    const statusBadge = {
+      hadir: ['status-badge-hadir', 'Hadir'], terlambat: ['bg-orange-100 text-orange-700', 'Terlambat'],
+      izin: ['bg-blue-100 text-blue-700', 'Izin'], sakit: ['bg-amber-100 text-amber-700', 'Sakit'], alfa: ['bg-red-100 text-red-700', 'Alfa']
+    };
+    const [badgeClass, badgeText] = statusBadge[todayAttendance.status] || ['bg-slate-100 text-slate-500', 'Tercatat'];
+    badge.className = `px-2 py-0.5 rounded-full text-xs font-semibold ${badgeClass}`;
+    badge.textContent = badgeText;
 
     if (todayAttendance.check_in_time) {
       btnAbsen.disabled = true;
@@ -364,7 +394,7 @@ function updateAttendanceUI() {
       // Gunakan pengecekan if untuk span pulang
       const spanPulang = btnPulang.querySelector('span');
       if (spanPulang) spanPulang.textContent = 'Sudah Pulang';
-    } else if (todayAttendance.check_in_time) {
+    } else if (todayAttendance.check_in_time && ['hadir', 'terlambat'].includes(todayAttendance.status)) {
       // Can check out
     }
   }
@@ -468,6 +498,34 @@ function updateAttendanceUI() {
       }
     }
 
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+    }
+
+    async function loadLeaveRequests() {
+      const container = document.getElementById('leaveRequestList');
+      const { data, error } = await sb.from('leave_requests').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(3);
+      if (error) { container.innerHTML = '<p class="text-xs text-red-500">Pengajuan belum tersedia. Jalankan pembaruan skema database.</p>'; return; }
+      if (!data?.length) { container.innerHTML = '<p class="text-xs text-slate-400">Belum ada pengajuan terbaru.</p>'; return; }
+      const statusClass = { menunggu: 'bg-amber-100 text-amber-700', disetujui: 'bg-emerald-100 text-emerald-700', ditolak: 'bg-red-100 text-red-700' };
+      container.innerHTML = data.map(item => `<div class="rounded-xl bg-slate-50 px-3 py-2 text-xs"><div class="flex items-center justify-between gap-2"><span class="font-semibold text-slate-700">${item.leave_type === 'sakit' ? 'Sakit' : 'Izin'} · ${formatDate(item.start_date)}${item.end_date !== item.start_date ? ' – ' + formatDate(item.end_date) : ''}</span><span class="rounded-full px-2 py-0.5 font-medium ${statusClass[item.status]}">${item.status}</span></div><p class="mt-1 text-slate-500">${escapeHtml(item.reason)}${item.admin_note ? ' · Admin: ' + escapeHtml(item.admin_note) : ''}</p></div>`).join('');
+    }
+
+    document.getElementById('leaveRequestForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const startDate = document.getElementById('leaveStartDate').value;
+      const endDate = document.getElementById('leaveEndDate').value;
+      const reason = document.getElementById('leaveReason').value.trim();
+      if (!startDate || !endDate || endDate < startDate || reason.length < 5) { showToast('Lengkapi tanggal dan alasan minimal 5 karakter', 'error'); return; }
+      const btn = document.getElementById('leaveSubmitBtn'); btn.disabled = true; btn.textContent = 'Mengirim...';
+      const { error } = await sb.from('leave_requests').insert({ user_id: currentUser.id, leave_type: document.getElementById('leaveType').value, start_date: startDate, end_date: endDate, reason });
+      btn.disabled = false; btn.textContent = 'Kirim Pengajuan';
+      if (error) { showToast('Gagal mengirim pengajuan: ' + error.message, 'error'); return; }
+      document.getElementById('leaveReason').value = '';
+      showToast('Pengajuan terkirim dan menunggu persetujuan admin');
+      await loadLeaveRequests();
+    });
+
     // GPS Location
     function startGPS() {
       const gpsLabel = document.getElementById('gpsLabel');
@@ -533,9 +591,9 @@ function updateAttendanceUI() {
         gpsIcon.className = 'w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0';
         gpsIcon.innerHTML = `<svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
 
-        if (!todayAttendance?.check_in_time) btnAbsen.disabled = false;
-        if (todayAttendance?.check_in_time && !todayAttendance?.check_out_time) btnPulang.disabled = false;
-        handleAutoCheckIn();
+        if (!todayAttendance) btnAbsen.disabled = false;
+        if (todayAttendance?.check_in_time && !todayAttendance?.check_out_time && ['hadir', 'terlambat'].includes(todayAttendance.status)) btnPulang.disabled = false;
+        if (!todayAttendance) handleAutoCheckIn();
       } else {
         gpsLabel.textContent = '✗ Di Luar Radius Sekolah';
         gpsDetail.textContent = `Anda ${Math.round(distance)}m dari sekolah. Harus < ${radius}m untuk absen.`;
@@ -578,7 +636,7 @@ function updateAttendanceUI() {
 
     async function performCheckIn(trigger = 'manual') {
       if (!userLocation) { showToast('Lokasi belum terdeteksi', 'error'); return false; }
-      if (todayAttendance?.check_in_time) return true;
+      if (todayAttendance) return true;
 
       const btn = document.getElementById('btnAbsen');
       setLoading(btn, true);
@@ -637,7 +695,7 @@ function updateAttendanceUI() {
 
     async function handleAutoCheckIn() {
       const today = getTodayStr();
-      if (autoCheckInInProgress || autoCheckInAttemptedForDate === today || todayAttendance?.check_in_time) return;
+      if (autoCheckInInProgress || autoCheckInAttemptedForDate === today || todayAttendance) return;
 
       const currentTime = getCurrentTime();
       const checkInStart = normalizeSettingTime(schoolSettings.check_in_start, '06:30');
