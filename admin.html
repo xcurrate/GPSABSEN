@@ -1283,17 +1283,38 @@
 
         } else {
           // ── EDIT GURU ─────────────────────────────────────────
-          const { error: updateErr } = await sb.from('profiles').update({
-            full_name: name,
-            nip:     nip     || null,
-            subject: subject || null,
-            phone:   phone   || null,
-            role,
-            is_active: isActive,
-          }).eq('id', editingGuruId);
-          if (updateErr) throw updateErr;
+          if (password && password.length < 6) {
+            throw new Error('Password baru minimal 6 karakter');
+          }
 
-          showToast(`✓ Data ${name} berhasil diperbarui`);
+          const { data: { session } } = await sb.auth.getSession();
+          if (!session?.access_token) throw new Error('Sesi admin tidak valid, silakan login ulang.');
+
+          const adminUpdateEndpoint = getAdminFunctionEndpoint('admin-update-user');
+          const updateRes = await fetch(adminUpdateEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              user_id: editingGuruId,
+              full_name: name,
+              role,
+              nip: nip || null,
+              subject: subject || null,
+              phone: phone || null,
+              is_active: isActive,
+              ...(password ? { password } : {}),
+            }),
+          });
+
+          const updateData = await updateRes.json().catch(() => ({}));
+          if (!updateRes.ok) {
+            throw new Error(updateData?.error || updateData?.message || 'Gagal memperbarui data guru');
+          }
+
+          showToast(`✓ Data ${name} berhasil diperbarui${updateData.password_updated ? ' dan password berhasil diubah' : ''}`);
         }
 
         closeModal('modalGuru');
