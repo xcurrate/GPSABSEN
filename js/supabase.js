@@ -72,6 +72,11 @@ async function fetchAllRows(buildQuery, pageSize = 1000) {
   return all;
 }
 
+// Helper: escape nilai agar aman disisipkan ke HTML
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+}
+
 // Helper: escape nilai agar aman sebagai satu sel CSV
 function csvEscape(value) {
   const str = String(value ?? '');

@@ -33,8 +33,8 @@ Logika bersama ada di `js/supabase.js` (klien Supabase + helper: `getTodayStr`, 
 
 - Logika endpoint admin ada di satu tempat: `lib/admin-core.js` (CommonJS). `api/*.js` (Vercel, ESM) dan `netlify/functions/*.js` (Netlify, CJS) hanyalah adapter tipis yang memanggil core. Jangan menduplikasi logika ke adapter.
 - Frontend memanggil endpoint admin lewat `/api/<nama>` untuk kedua platform (Netlify diarahkan oleh `netlify.toml`).
-- Ekspor CSV sudah memakai `csvEscape`; impor CSV absensi sudah aman.
-- Beberapa tombol admin (edit/delete absensi, edit/delete agenda) memanggil fungsi yang perlu diverifikasi masih ada.
+- Helper bersama (`escapeHtml`, `csvEscape`, `fetchAllRows`, `getTodayStr`, `formatDate`, `formatTime`) ada di `js/supabase.js`; semua halaman sudah memuatnya. Jangan definisikan ulang di halaman.
+- Semua handler `onclick`/`onchange` dan `getElementById` di `admin.html`/`dashboard.html`/`rekap.html` sudah diverifikasi cocok dengan fungsi/elemen yang ada.
 - Tidak ada test, linter, atau CI di repo ini.
 
 ## Verifikasi

@@ -498,10 +498,6 @@ function updateAttendanceUI() {
       }
     }
 
-    function escapeHtml(value) {
-      return String(value || '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
-    }
-
     async function loadLeaveRequests() {
       const container = document.getElementById('leaveRequestList');
       const { data, error } = await sb.from('leave_requests').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(3);
@@ -679,8 +675,8 @@ function updateAttendanceUI() {
         await loadStats();
         return true;
       } catch (err) {
-        const message = err.message.includes('duplicate')
-          ? 'Anda sudah absen hari ini' : 'Gagal absen: ' + err.message;
+        const raw = err?.message || String(err);
+        const message = /sudah absen|duplicate/i.test(raw) ? 'Anda sudah absen hari ini' : 'Gagal absen: ' + raw;
         showToast(message, 'error');
         updateAutoAttendanceStatus(message, 'error');
         return false;
@@ -732,7 +728,7 @@ function updateAttendanceUI() {
         await loadTodayAttendance();
         await loadHistory();
       } catch (err) {
-        showToast('Gagal absen pulang: ' + err.message, 'error');
+        showToast('Gagal absen pulang: ' + (err?.message || String(err)), 'error');
       }
       setLoading(btn, false);
     });

@@ -184,7 +184,7 @@
             </p>
           </div>
           <span class="text-xs px-2.5 py-1 rounded-lg font-semibold ${statusClass[item.status] || 'bg-slate-100 text-slate-600'}">
-            ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            ${escapeHtml(item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : '-')}
           </span>
         </div>
       `).join('');

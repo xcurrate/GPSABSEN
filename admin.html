@@ -1474,8 +1474,6 @@
       renderLeaveRequests();
     }
 
-    function escapeHtml(value) { return String(value || '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]); }
-
     function renderLeaveRequests() {
       const container = document.getElementById('leaveRequestsTable');
       if (!allLeaveRequests.length) { container.innerHTML = '<div class="p-8 text-center text-sm text-slate-400">Tidak ada pengajuan pada filter ini</div>'; return; }
