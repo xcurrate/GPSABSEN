@@ -58,6 +58,26 @@ async function requireAdmin(redirectTo = 'dashboard.html') {
   return { user, profile };
 }
 
+// Helper: ambil semua baris dengan paginasi (PostgREST default membatasi 1000)
+async function fetchAllRows(buildQuery, pageSize = 1000) {
+  const all = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
+// Helper: escape nilai agar aman sebagai satu sel CSV
+function csvEscape(value) {
+  const str = String(value ?? '');
+  return /["\n\r,]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
 // Helper: format tanggal Indo
 function formatDate(dateStr) {
   const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];

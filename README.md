@@ -21,7 +21,7 @@ Aplikasi absensi guru berbasis lokasi GPS, dibangun dengan HTML, CSS, dan JavaSc
 -   Semua tabel dilindungi Row Level Security (RLS). Kunci `service_role` **tidak boleh** ditaruh di frontend; operasi istimewa dijalankan melalui serverless function di `/api` atau `/netlify/functions`.
 -   Kolom sensitif pada `profiles` (`role`, `is_active`) hanya dapat diubah oleh admin. Guru mengubah nama/telepon/avatar lewat RPC `update_my_profile`.
 -   Role akun baru selalu `guru`; promosi ke admin dilakukan manual di tabel `profiles`.
--   Validasi radius GPS dan jam kerja berjalan di klien. Validasi ini adalah lapisan UX, bukan pengaman; pengaman data wajib di sisi server/RLS.
+-   Validasi radius GPS dan jam kerja dilakukan di sisi server melalui RPC `check_in()` / `check_out()`. Klien hanya menampilkan status; guru tidak bisa menulis absensi langsung ke tabel.
 
 ## Struktur Proyek
 
