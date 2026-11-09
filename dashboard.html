@@ -489,17 +489,13 @@ function updateAttendanceUI() {
         .lte('date', lastDay);
 
       if (data) {
-        const hadir = data.filter(d => d.status === 'hadir').length;
+        const hadir = data.filter(d => d.status === 'hadir' || d.status === 'terlambat').length;
         const izin = data.filter(d => d.status === 'izin' || d.status === 'sakit').length;
         const alfa = data.filter(d => d.status === 'alfa').length;
         document.getElementById('statHadir').textContent = hadir;
         document.getElementById('statIzin').textContent = izin;
         document.getElementById('statAlfa').textContent = alfa;
       }
-    }
-
-    function escapeHtml(value) {
-      return String(value || '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
     }
 
     async function loadLeaveRequests() {
@@ -656,18 +652,16 @@ function updateAttendanceUI() {
         }
 
         // 2. Tentukan status (Hadir atau Terlambat)
-        const statusFinal = (currentTime > checkInEnd) ? 'terlambat' : 'hadir';
+        let statusFinal = (currentTime > checkInEnd) ? 'terlambat' : 'hadir';
 
-        const { error } = await sb.from('attendance').insert({
-          user_id: currentUser.id,
-          date: getTodayStr(),
-          check_in_time: currentTime,
-          latitude: userLocation.lat,
-          longitude: userLocation.lng,
-          status: statusFinal // Menggunakan status dinamis
+        // Validasi radius, jam, dan status dilakukan di server lewat RPC check_in.
+        const { data: att, error } = await sb.rpc('check_in', {
+          in_lat: userLocation.lat,
+          in_lng: userLocation.lng,
         });
 
         if (error) throw error;
+        if (att?.status) statusFinal = att.status;
 
         const pesan = statusFinal === 'terlambat'
           ? `✓ Absen Berhasil (Terlambat)`
@@ -681,8 +675,8 @@ function updateAttendanceUI() {
         await loadStats();
         return true;
       } catch (err) {
-        const message = err.message.includes('duplicate')
-          ? 'Anda sudah absen hari ini' : 'Gagal absen: ' + err.message;
+        const raw = err?.message || String(err);
+        const message = /sudah absen|duplicate/i.test(raw) ? 'Anda sudah absen hari ini' : 'Gagal absen: ' + raw;
         showToast(message, 'error');
         updateAutoAttendanceStatus(message, 'error');
         return false;
@@ -723,14 +717,10 @@ function updateAttendanceUI() {
 
       try {
         const now = new Date();
-        const { error } = await sb.from('attendance')
-          .update({
-            check_out_time: getCurrentTime(),
-            latitude_out: userLocation.lat,
-            longitude_out: userLocation.lng
-          })
-          .eq('user_id', currentUser.id)
-          .eq('date', getTodayStr());
+        const { error } = await sb.rpc('check_out', {
+          in_lat: userLocation.lat,
+          in_lng: userLocation.lng,
+        });
 
         if (error) throw error;
 
@@ -738,7 +728,7 @@ function updateAttendanceUI() {
         await loadTodayAttendance();
         await loadHistory();
       } catch (err) {
-        showToast('Gagal absen pulang: ' + err.message, 'error');
+        showToast('Gagal absen pulang: ' + (err?.message || String(err)), 'error');
       }
       setLoading(btn, false);
     });

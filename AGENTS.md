@@ -17,10 +17,11 @@ Logika bersama ada di `js/supabase.js` (klien Supabase + helper: `getTodayStr`, 
 ## Aturan Penting
 
 - JANGAN pernah menaruh `service_role key` di file frontend mana pun. Kunci itu hanya boleh ada sebagai environment variable pada serverless function.
-- Validasi radius GPS dan jam kerja di klien hanyalah lapisan UX. Pengaman data wajib di sisi server/RLS.
+- Validasi radius GPS dan jam kerja di klien hanyalah lapisan UX. Pengaman data ada di sisi server: absensi guru WAJIB lewat RPC `check_in()` / `check_out()` (yang memvalidasi radius & jam di server). Jangan kembali memakai `insert`/`update` langsung ke tabel `attendance` dari dashboard guru — RLS sudah melarangnya.
+- Helper bersama (`escapeHtml`, `csvEscape`, `fetchAllRows`, `getTodayStr`, `formatDate`, `formatTime`, dll) ada di `js/supabase.js` dan dimuat semua halaman. Jangan definisikan ulang di halaman. Gunakan `escapeHtml` untuk semua HTML, `csvEscape` untuk semua ekspor CSV, dan `fetchAllRows` untuk query list yang bisa melebihi 1000 baris (batas default PostgREST).
 - Setiap kali mengubah skema, perbarui `sql/schema.sql` (instalasi baru) DAN `sql/hardening.sql` (patch untuk instalasi berjalan).
 - Gunakan `getTodayStr()` untuk tanggal, jangan `new Date().toISOString()` (bug zona waktu UTC vs WIB).
-- Definisi "hadir" harus konsisten: di `dashboard.html` dan `rekap.html` status `hadir` dihitung terpisah dari `terlambat`; di `admin.html` keduanya digabung. Perhatikan konteks sebelum mengubah.
+- Definisi "hadir" sekarang konsisten: `hadir + terlambat` dihitung sebagai kehadiran di `dashboard.html`, `rekap.html`, dan `admin.html`.
 
 ## Konvensi Kode
 
@@ -30,11 +31,10 @@ Logika bersama ada di `js/supabase.js` (klien Supabase + helper: `getTodayStr`, 
 
 ## Catatan Teknis / Utang Teknis
 
-- Dua implementasi serverless (`api/` dan `netlify/functions/`) bisa divergen. Jika memperbaiki satu, perbaiki keduanya.
-- `getAdminFunctionEndpoint` mendeteksi Netlify lewat `hostname.includes('netlify.app')` (gagal di domain kustom).
-- Query list tidak dipaginasi; PostgREST default max-rows 1000 sehingga laporan besar bisa terpotong.
-- Ekspor CSV di `rekap.html` dan `exportRekapGuruCSV` belum memakai `csvEscape`.
-- Beberapa tombol admin (edit/delete absensi, edit/delete agenda) memanggil fungsi yang perlu diverifikasi masih ada.
+- Logika endpoint admin ada di satu tempat: `lib/admin-core.js` (CommonJS). `api/*.js` (Vercel, ESM) dan `netlify/functions/*.js` (Netlify, CJS) hanyalah adapter tipis yang memanggil core. Jangan menduplikasi logika ke adapter.
+- Frontend memanggil endpoint admin lewat `/api/<nama>` untuk kedua platform (Netlify diarahkan oleh `netlify.toml`).
+- Helper bersama (`escapeHtml`, `csvEscape`, `fetchAllRows`, `getTodayStr`, `formatDate`, `formatTime`) ada di `js/supabase.js`; semua halaman sudah memuatnya. Jangan definisikan ulang di halaman.
+- Semua handler `onclick`/`onchange` dan `getElementById` di `admin.html`/`dashboard.html`/`rekap.html` sudah diverifikasi cocok dengan fungsi/elemen yang ada.
 - Tidak ada test, linter, atau CI di repo ini.
 
 ## Verifikasi

@@ -579,16 +579,22 @@
       document.getElementById('absensiTable').innerHTML =
         '<div class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>';
 
-      let query = sb.from('attendance')
-        .select('*, profiles!inner(full_name, nip, subject)')
-        .order('date', { ascending: false })
-        .order('check_in_time', { ascending: true });
-
-      if (from) query = query.gte('date', from);
-      if (to) query = query.lte('date', to);
-
-      const { data, error } = await query;
-      if (error) { showToast('Gagal memuat absensi', 'error'); return; }
+      let data;
+      try {
+        data = await fetchAllRows(() => {
+          let q = sb.from('attendance')
+            .select('*, profiles!inner(full_name, nip, subject)')
+            .order('date', { ascending: false })
+            .order('check_in_time', { ascending: true })
+            .order('id', { ascending: true });
+          if (from) q = q.gte('date', from);
+          if (to) q = q.lte('date', to);
+          return q;
+        });
+      } catch (err) {
+        showToast('Gagal memuat absensi', 'error');
+        return;
+      }
 
       allAbsensiData = (data || []).filter(item =>
         !search || item.profiles.full_name.toLowerCase().includes(search)
@@ -631,11 +637,6 @@
       `).join('');
     }
 
-
-    function csvEscape(value) {
-      const str = String(value ?? '');
-      return /["\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-    }
 
     function parseCSV(text) {
       const rows = [];
@@ -718,9 +719,10 @@
     }
 
     function getAdminFunctionEndpoint(functionName) {
-      return window.location.hostname.includes('netlify.app')
-        ? `/.netlify/functions/${functionName}`
-        : `/api/${functionName}`;
+      // Selalu pakai /api/*. Di Vercel ini native; di Netlify netlify.toml
+      // sudah mengarahkan /api/* ke /.netlify/functions/:splat, sehingga
+      // deteksi platform lewat hostname tidak diperlukan lagi.
+      return `/api/${functionName}`;
     }
 
     function isMissingImportRpcError(error) {
@@ -944,26 +946,32 @@
 
       table.innerHTML = '<div class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>';
 
-      const [guruRes, attendanceRes] = await Promise.all([
-        sb.from('profiles')
-          .select('id, full_name, nip, subject, is_active')
-          .eq('role', 'guru')
-          .order('full_name'),
-        sb.from('attendance')
-          .select('user_id, status')
-          .gte('date', from)
-          .lte('date', to)
-      ]);
+      let guruRes, attendanceData;
+      try {
+        [guruRes, attendanceData] = await Promise.all([
+          sb.from('profiles')
+            .select('id, full_name, nip, subject, is_active')
+            .eq('role', 'guru')
+            .order('full_name'),
+          fetchAllRows(() => sb.from('attendance')
+            .select('user_id, status')
+            .order('user_id', { ascending: true })
+            .gte('date', from)
+            .lte('date', to))
+        ]);
+      } catch (err) {
+        showToast('Gagal memuat data rekap', 'error');
+        return;
+      }
 
       if (guruRes.error) { showToast('Gagal memuat data guru', 'error'); return; }
-      if (attendanceRes.error) { showToast('Gagal memuat data rekap', 'error'); return; }
 
       const guruRows = (guruRes.data || []).filter(guru =>
         guru.is_active !== false && (!search || guru.full_name.toLowerCase().includes(search))
       );
       const rekapMap = new Map(guruRows.map(guru => [guru.id, createEmptyRekapRow(guru)]));
 
-      (attendanceRes.data || []).forEach(item => {
+      (attendanceData || []).forEach(item => {
         const row = rekapMap.get(item.user_id);
         if (!row || !['hadir', 'terlambat', 'izin', 'sakit', 'alfa'].includes(item.status)) return;
         row[item.status] += 1;
@@ -1049,7 +1057,7 @@
         ];
       });
 
-      const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+      const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1465,8 +1473,6 @@
       allLeaveRequests = data || [];
       renderLeaveRequests();
     }
-
-    function escapeHtml(value) { return String(value || '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]); }
 
     function renderLeaveRequests() {
       const container = document.getElementById('leaveRequestsTable');

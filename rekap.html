@@ -160,7 +160,7 @@
       rekapData = data || [];
 
       // Stats
-      document.getElementById('sHadir').textContent = rekapData.filter(d => d.status === 'hadir').length;
+      document.getElementById('sHadir').textContent = rekapData.filter(d => d.status === 'hadir' || d.status === 'terlambat').length;
       document.getElementById('sIzin').textContent = rekapData.filter(d => d.status === 'izin').length;
       document.getElementById('sSakit').textContent = rekapData.filter(d => d.status === 'sakit').length;
       document.getElementById('sAlfa').textContent = rekapData.filter(d => d.status === 'alfa').length;
@@ -172,7 +172,7 @@
         return;
       }
 
-      const statusClass = { hadir: 'status-hadir', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
+      const statusClass = { hadir: 'status-hadir', terlambat: 'bg-orange-100 text-orange-700', izin: 'status-izin', sakit: 'status-sakit', alfa: 'status-alfa' };
 
       document.getElementById('rekapTable').innerHTML = rekapData.map(item => `
         <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50">
@@ -184,7 +184,7 @@
             </p>
           </div>
           <span class="text-xs px-2.5 py-1 rounded-lg font-semibold ${statusClass[item.status] || 'bg-slate-100 text-slate-600'}">
-            ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            ${escapeHtml(item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : '-')}
           </span>
         </div>
       `).join('');
@@ -203,7 +203,7 @@
         item.notes || ''
       ]);
 
-      const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+      const csvContent = [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\n');
       const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
