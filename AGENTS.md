@@ -18,7 +18,7 @@ Logika bersama ada di `js/supabase.js` (klien Supabase + helper: `getTodayStr`, 
 
 - JANGAN pernah menaruh `service_role key` di file frontend mana pun. Kunci itu hanya boleh ada sebagai environment variable pada serverless function.
 - Validasi radius GPS dan jam kerja di klien hanyalah lapisan UX. Pengaman data ada di sisi server: absensi guru WAJIB lewat RPC `check_in()` / `check_out()` (yang memvalidasi radius & jam di server). Jangan kembali memakai `insert`/`update` langsung ke tabel `attendance` dari dashboard guru — RLS sudah melarangnya.
-- Helper bersama `csvEscape()` dan `fetchAllRows()` ada di `js/supabase.js`. Gunakan `csvEscape` untuk semua ekspor CSV dan `fetchAllRows` untuk query list yang bisa melebihi 1000 baris (batas default PostgREST).
+- Helper bersama (`escapeHtml`, `csvEscape`, `fetchAllRows`, `getTodayStr`, `formatDate`, `formatTime`, dll) ada di `js/supabase.js` dan dimuat semua halaman. Jangan definisikan ulang di halaman. Gunakan `escapeHtml` untuk semua HTML, `csvEscape` untuk semua ekspor CSV, dan `fetchAllRows` untuk query list yang bisa melebihi 1000 baris (batas default PostgREST).
 - Setiap kali mengubah skema, perbarui `sql/schema.sql` (instalasi baru) DAN `sql/hardening.sql` (patch untuk instalasi berjalan).
 - Gunakan `getTodayStr()` untuk tanggal, jangan `new Date().toISOString()` (bug zona waktu UTC vs WIB).
 - Definisi "hadir" sekarang konsisten: `hadir + terlambat` dihitung sebagai kehadiran di `dashboard.html`, `rekap.html`, dan `admin.html`.
