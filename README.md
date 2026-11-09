@@ -71,12 +71,12 @@ Repo ini menyertakan workflow `.github/workflows/keepalive.yml` yang mengirim be
 **Cara mengaktifkan:**
 
 1. Buka **Settings > Secrets and variables > Actions** di repo GitHub.
-2. Tambahkan dua *repository secret*:
+2. Tambahkan dua nilai bernama `SUPABASE_URL` dan `SUPABASE_ANON_KEY`, boleh di tab **Secrets** maupun **Variables** (keduanya didukung; secret diprioritaskan bila keduanya ada):
    - `SUPABASE_URL` — URL proyek, mis. `https://xxxx.supabase.co` (sama dengan yang ada di `js/supabase.js`).
    - `SUPABASE_ANON_KEY` — `anon (public) key` proyek.
 3. Workflow berjalan otomatis sesuai jadwal, dan bisa diuji manual lewat tab **Actions > Supabase Keep-Alive > Run workflow**.
 
-> Cukup gunakan `anon key`. Jangan pernah menyimpan `service_role key` di secrets GitHub untuk workflow ini.
+> Cukup gunakan `anon key` (memang publik, aman ditaruh di Variables). Jangan pernah menyimpan `service_role key` di sini.
 
 ## Kontribusi
 
