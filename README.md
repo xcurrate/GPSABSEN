@@ -15,19 +15,26 @@ Aplikasi absensi guru berbasis lokasi GPS, dibangun dengan HTML, CSS, dan JavaSc
     -   Mengatur parameter aplikasi seperti nama sekolah, koordinat GPS, radius absensi, dan jam kerja.
 -   **Otentikasi**: Sistem otentikasi berbasis email dan password untuk guru dan admin.
 -   **Impor/Ekspor Data**: Admin dapat mengimpor data absensi dari file CSV dan mengekspor laporan absensi atau rekap ke dalam format CSV.
--   **PWA (Progressive Web App)**: Aplikasi dapat di-install di perangkat mobile untuk akses yang lebih mudah.
+
+## Keamanan
+
+-   Semua tabel dilindungi Row Level Security (RLS). Kunci `service_role` **tidak boleh** ditaruh di frontend; operasi istimewa dijalankan melalui serverless function di `/api` atau `/netlify/functions`.
+-   Kolom sensitif pada `profiles` (`role`, `is_active`) hanya dapat diubah oleh admin. Guru mengubah nama/telepon/avatar lewat RPC `update_my_profile`.
+-   Role akun baru selalu `guru`; promosi ke admin dilakukan manual di tabel `profiles`.
+-   Validasi radius GPS dan jam kerja berjalan di klien. Validasi ini adalah lapisan UX, bukan pengaman; pengaman data wajib di sisi server/RLS.
 
 ## Struktur Proyek
 
 -   `index.html`: Halaman login untuk guru dan admin.
 -   `dashboard.html`: Halaman dashboard untuk guru setelah login, menampilkan status absensi, riwayat, dan agenda.
 -   `admin.html`: Panel admin untuk mengelola data dan melihat laporan.
--   `/css/style.css`: File styling utama.
+-   `rekap.html`: Halaman rekapitulasi absensi bulanan untuk guru.
+-   `/css/style.css`: File styling dasar (styling utama memakai Tailwind via CDN).
 -   `/js/supabase.js`: Klien dan konfigurasi untuk koneksi ke Supabase.
--   `/img/`: Aset gambar.
--   `manifest.json`: Konfigurasi untuk PWA.
--   `sw.js`: Service worker untuk fungsionalitas offline dan PWA.
--   `/api/admin-create-user.js`: Netlify Function (atau backend setara) untuk membuat user baru dari panel admin. Endpoint ini memerlukan hak akses admin Supabase.
+-   `/sql/schema.sql`: Skema database untuk instalasi baru.
+-   `/sql/hardening.sql`: Patch keamanan untuk instalasi yang sudah berjalan.
+-   `/api/admin-create-user.js`: Serverless Function (Vercel) untuk membuat user baru dari panel admin. Endpoint ini memerlukan hak akses admin Supabase.
+-   `/netlify/functions/`: Versi Netlify Functions dari endpoint admin di atas.
 
 ## Backend (Supabase)
 
@@ -39,11 +46,13 @@ Aplikasi ini menggunakan [Supabase](https://supabase.com) sebagai backend untuk 
 
 1.  **Clone Repositori**: `git clone https://github.com/xcurrate/GPSABSEN.git`
 2.  **Buat Proyek Supabase**: Daftar atau login ke [Supabase](https://supabase.com) dan buat proyek baru.
-3.  **Skema Database**: Salin dan jalankan query dari `sql/schema.sql` di *SQL Editor* Supabase untuk membuat tabel dan fungsi yang diperlukan. Untuk instalasi yang sudah berjalan, jalankan bagian tabel `leave_requests`, kebijakan RLS, dan fungsi persetujuan pengajuan agar fitur ini tersedia.
+3.  **Skema Database**: Salin dan jalankan query dari `sql/schema.sql` di *SQL Editor* Supabase untuk membuat tabel dan fungsi yang diperlukan. Untuk instalasi yang sudah berjalan, jalankan `sql/hardening.sql` (menutup celah eskalasi role pada profil & trigger signup) selain bagian tabel `leave_requests`, kebijakan RLS, dan fungsi persetujuan pengajuan.
 4.  **Konfigurasi Supabase**: 
     - Masuk ke *Project Settings* > *API*.
     - Salin `URL` dan `anon (public) key`.
     - Tempelkan ke dalam file `js/supabase.js`.
+
+    > **Jangan pernah menaruh `service_role key` di `js/supabase.js` atau file frontend mana pun.** Kunci tersebut melewati seluruh RLS dan hanya boleh dipakai sebagai environment variable pada serverless function (lihat langkah 6).
 5.  **Buat User Admin**: 
     - Buka *Authentication* di Supabase.
     - Buat user baru secara manual. 

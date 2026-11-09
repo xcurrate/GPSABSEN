@@ -116,10 +116,9 @@ CREATE POLICY "Profiles visible to authenticated users"
   TO authenticated
   USING (true);
 
-CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = id);
+-- Guru tidak boleh UPDATE profiles langsung: kolom role/is_active sensitif.
+-- Perubahan profil sendiri dilakukan lewat RPC update_my_profile().
+-- Perubahan oleh admin memakai policy "Admin can update profiles".
 
 CREATE POLICY "Admin can update profiles"
   ON public.profiles FOR UPDATE
@@ -235,11 +234,11 @@ BEGIN
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'guru'),
+    'guru',
     NULLIF(NEW.raw_user_meta_data->>'nip', ''),
     NULLIF(NEW.raw_user_meta_data->>'subject', ''),
     NULLIF(NEW.raw_user_meta_data->>'phone', ''),
-    COALESCE((NEW.raw_user_meta_data->>'is_active')::BOOLEAN, true)
+    true
   );
   RETURN NEW;
 END;
@@ -250,6 +249,39 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
+-- FUNCTION: update profil sendiri (kolom non-sensitif saja)
+-- Dipakai guru untuk mengubah nama/telepon/avatar tanpa bisa
+-- menyentuh role atau is_active.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.update_my_profile(
+  new_full_name TEXT DEFAULT NULL,
+  new_phone TEXT DEFAULT NULL,
+  new_avatar_url TEXT DEFAULT NULL
+)
+RETURNS public.profiles AS $$
+DECLARE
+  updated public.profiles;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Harus login' USING ERRCODE = '42501';
+  END IF;
+
+  UPDATE public.profiles
+  SET
+    full_name = COALESCE(NULLIF(trim(new_full_name), ''), full_name),
+    phone = COALESCE(new_phone, phone),
+    avatar_url = COALESCE(new_avatar_url, avatar_url)
+  WHERE id = auth.uid()
+  RETURNING * INTO updated;
+
+  RETURN updated;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION public.update_my_profile(TEXT, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.update_my_profile(TEXT, TEXT, TEXT) TO authenticated;
 
 -- ============================================================
 -- FUNCTION: update updated_at otomatis
