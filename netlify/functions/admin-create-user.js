@@ -1,13 +1,30 @@
 const isSchoolEmail = (email) => /^[^\s@]+@[^\s@]+\.sch\.id$/i.test(String(email || '').trim());
-const parseJwt = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
+
+async function getAuthenticatedAdmin(event, projectUrl, serviceRole) {
+  const token = (event.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { error: 'Missing access token', status: 401 };
+
+  const userRes = await fetch(`${projectUrl}/auth/v1/user`, {
+    headers: { apikey: serviceRole, Authorization: `Bearer ${token}` },
+  });
+  const user = await userRes.json().catch(() => null);
+  if (!userRes.ok || !user?.id) return { error: 'Sesi admin tidak valid atau sudah kedaluwarsa', status: 401 };
+
+  const profileRes = await fetch(
+    `${projectUrl}/rest/v1/profiles?select=role&id=eq.${encodeURIComponent(user.id)}`,
+    { headers: { apikey: serviceRole, Authorization: `Bearer ${serviceRole}` } }
+  );
+  const profiles = await profileRes.json().catch(() => []);
+  if (!profileRes.ok || profiles[0]?.role !== 'admin') {
+    return { error: 'Hanya admin yang diizinkan', status: 403 };
+  }
+
+  return { user };
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   try {
-    const token = (event.headers.authorization || '').replace('Bearer ', '').trim();
-    if (!token) return { statusCode: 401, body: JSON.stringify({ error: 'Missing access token' }) };
-    const userId = parseJwt(token).sub;
-
     const { email, password, full_name, role = 'guru', nip = null, subject = null, phone = null, is_active = true } = JSON.parse(event.body || '{}');
     if (!email || !password || !full_name) return { statusCode: 400, body: JSON.stringify({ error: 'email, password, full_name wajib diisi' }) };
     if (!isSchoolEmail(email)) return { statusCode: 400, body: JSON.stringify({ error: 'Email harus menggunakan domain sekolah berakhiran .sch.id, contoh nama@mitakbr.sch.id.' }) };
@@ -18,9 +35,8 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY belum tersedia. Fallback signup publik akan dicoba dari browser.' }) };
     }
 
-    const adminCheck = await fetch(`${projectUrl}/rest/v1/profiles?select=role&id=eq.${userId}`, { headers: { apikey: serviceRole, Authorization: `Bearer ${serviceRole}` } });
-    const adminData = await adminCheck.json();
-    if (!adminCheck.ok || adminData[0]?.role !== 'admin') return { statusCode: 403, body: JSON.stringify({ error: 'Hanya admin yang diizinkan' }) };
+    const auth = await getAuthenticatedAdmin(event, projectUrl, serviceRole);
+    if (auth.error) return { statusCode: auth.status, body: JSON.stringify({ error: auth.error }) };
 
     const normalizedEmail = email.trim().toLowerCase();
     const createRes = await fetch(`${projectUrl}/auth/v1/admin/users`, {

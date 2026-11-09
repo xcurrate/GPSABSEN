@@ -1,0 +1,15 @@
+# Artefak build / arsip
+*.zip
+
+# Environment & rahasia
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Dependensi (jika ditambahkan nanti)
+node_modules/

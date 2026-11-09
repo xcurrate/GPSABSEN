@@ -4,7 +4,11 @@
 
 const SUPABASE_URL = 'https://sbxtfqidotarniglzban.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNieHRmcWlkb3Rhcm5pZ2x6YmFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMjgxODQsImV4cCI6MjA4MzgwNDE4NH0.MCiWNCcmQRBmAvAbsbcpdMbSOWAg7zPqJynpCLf1RKQ';
-const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNieHRmcWlkb3Rhcm5pZ2x6YmFuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODIyODE4NCwiZXhwIjoyMDgzODA0MTg0fQ.Hp-CEt0KrRay_G-NDUFq3x4prO3kEWImmPVZRssa2h0';
+
+// CATATAN KEAMANAN: Jangan pernah menaruh SUPABASE_SERVICE_ROLE_KEY di kode
+// frontend. Kunci service_role melewati seluruh RLS. Semua operasi yang butuh
+// hak istimewa harus lewat serverless function (api/ atau netlify/functions/)
+// yang menyimpan kunci tersebut sebagai environment variable di server.
 
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -81,9 +85,12 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// Helper: get today date string YYYY-MM-DD
+// Helper: get today date string YYYY-MM-DD (berdasarkan waktu lokal, bukan UTC)
 function getTodayStr() {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
 }
 
 // Helper: get current time HH:MM:SS
