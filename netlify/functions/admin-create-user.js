@@ -1,57 +1,18 @@
-const isSchoolEmail = (email) => /^[^\s@]+@[^\s@]+\.sch\.id$/i.test(String(email || '').trim());
-
-async function getAuthenticatedAdmin(event, projectUrl, serviceRole) {
-  const token = (event.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) return { error: 'Missing access token', status: 401 };
-
-  const userRes = await fetch(`${projectUrl}/auth/v1/user`, {
-    headers: { apikey: serviceRole, Authorization: `Bearer ${token}` },
-  });
-  const user = await userRes.json().catch(() => null);
-  if (!userRes.ok || !user?.id) return { error: 'Sesi admin tidak valid atau sudah kedaluwarsa', status: 401 };
-
-  const profileRes = await fetch(
-    `${projectUrl}/rest/v1/profiles?select=role&id=eq.${encodeURIComponent(user.id)}`,
-    { headers: { apikey: serviceRole, Authorization: `Bearer ${serviceRole}` } }
-  );
-  const profiles = await profileRes.json().catch(() => []);
-  if (!profileRes.ok || profiles[0]?.role !== 'admin') {
-    return { error: 'Hanya admin yang diizinkan', status: 403 };
-  }
-
-  return { user };
-}
+const { handleCreateUser } = require('../../lib/admin-core.js');
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
   try {
-    const { email, password, full_name, role = 'guru', nip = null, subject = null, phone = null, is_active = true } = JSON.parse(event.body || '{}');
-    if (!email || !password || !full_name) return { statusCode: 400, body: JSON.stringify({ error: 'email, password, full_name wajib diisi' }) };
-    if (!isSchoolEmail(email)) return { statusCode: 400, body: JSON.stringify({ error: 'Email harus menggunakan domain sekolah berakhiran .sch.id, contoh nama@mitakbr.sch.id.' }) };
+    const headers = {};
+    for (const [key, value] of Object.entries(event.headers || {})) headers[key.toLowerCase()] = value;
 
-    const projectUrl = process.env.SUPABASE_URL || 'https://sbxtfqidotarniglzban.supabase.co';
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRole) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'SUPABASE_SERVICE_ROLE_KEY belum tersedia. Fallback signup publik akan dicoba dari browser.' }) };
-    }
+    let body = {};
+    try { body = JSON.parse(event.body || '{}'); } catch { body = {}; }
 
-    const auth = await getAuthenticatedAdmin(event, projectUrl, serviceRole);
-    if (auth.error) return { statusCode: auth.status, body: JSON.stringify({ error: auth.error }) };
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const createRes = await fetch(`${projectUrl}/auth/v1/admin/users`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', apikey: serviceRole, Authorization: `Bearer ${serviceRole}` },
-      body: JSON.stringify({ email: normalizedEmail, password, email_confirm: true, user_metadata: { full_name, role, nip, subject, phone, is_active } }),
-    });
-    const createData = await createRes.json();
-    if (!createRes.ok) return { statusCode: createRes.status, body: JSON.stringify({ error: createData?.msg || createData?.message || 'Gagal membuat user' }) };
-
-    await fetch(`${projectUrl}/rest/v1/profiles`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', apikey: serviceRole, Authorization: `Bearer ${serviceRole}`, Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify([{ id: createData.id, full_name, nip, subject, phone, role, is_active }]),
-    });
-
-    return { statusCode: 200, body: JSON.stringify({ id: createData.id }) };
+    const { status, json } = await handleCreateUser({ headers, body });
+    return { statusCode: status, body: JSON.stringify(json) };
   } catch (error) {
     return { statusCode: 500, body: JSON.stringify({ error: error.message || 'Unexpected error' }) };
   }

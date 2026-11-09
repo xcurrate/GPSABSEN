@@ -31,8 +31,8 @@ Logika bersama ada di `js/supabase.js` (klien Supabase + helper: `getTodayStr`, 
 
 ## Catatan Teknis / Utang Teknis
 
-- Dua implementasi serverless (`api/` dan `netlify/functions/`) bisa divergen. Jika memperbaiki satu, perbaiki keduanya.
-- `getAdminFunctionEndpoint` mendeteksi Netlify lewat `hostname.includes('netlify.app')` (gagal di domain kustom).
+- Logika endpoint admin ada di satu tempat: `lib/admin-core.js` (CommonJS). `api/*.js` (Vercel, ESM) dan `netlify/functions/*.js` (Netlify, CJS) hanyalah adapter tipis yang memanggil core. Jangan menduplikasi logika ke adapter.
+- Frontend memanggil endpoint admin lewat `/api/<nama>` untuk kedua platform (Netlify diarahkan oleh `netlify.toml`).
 - Ekspor CSV sudah memakai `csvEscape`; impor CSV absensi sudah aman.
 - Beberapa tombol admin (edit/delete absensi, edit/delete agenda) memanggil fungsi yang perlu diverifikasi masih ada.
 - Tidak ada test, linter, atau CI di repo ini.

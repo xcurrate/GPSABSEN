@@ -719,9 +719,10 @@
     }
 
     function getAdminFunctionEndpoint(functionName) {
-      return window.location.hostname.includes('netlify.app')
-        ? `/.netlify/functions/${functionName}`
-        : `/api/${functionName}`;
+      // Selalu pakai /api/*. Di Vercel ini native; di Netlify netlify.toml
+      // sudah mengarahkan /api/* ke /.netlify/functions/:splat, sehingga
+      // deteksi platform lewat hostname tidak diperlukan lagi.
+      return `/api/${functionName}`;
     }
 
     function isMissingImportRpcError(error) {
