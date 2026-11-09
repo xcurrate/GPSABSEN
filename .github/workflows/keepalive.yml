@@ -1,0 +1,57 @@
+name: Supabase Keep-Alive
+
+# Supabase Free Plan menjeda proyek yang tidak ada aktivitas database selama 7 hari.
+# Workflow ini mengirim beberapa request ringan ke REST API tiap hari agar proyek
+# dianggap aktif dan tidak dijeda. Tidak mengubah data apa pun.
+
+on:
+  schedule:
+    # 4x sehari (UTC). Indonesia (WIB = UTC+7), jadi ini sekitar 08:00, 14:00, 20:00, 02:00 WIB.
+    - cron: '0 1,7,13,19 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping Supabase REST API
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validasi secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          missing=0
+          if [ -z "${SUPABASE_URL:-}" ]; then echo "::error::Secret SUPABASE_URL belum diset."; missing=1; fi
+          if [ -z "${SUPABASE_ANON_KEY:-}" ]; then echo "::error::Secret SUPABASE_ANON_KEY belum diset."; missing=1; fi
+          if [ "$missing" -ne 0 ]; then
+            echo "Tambahkan secrets di: Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Ping database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          url="${SUPABASE_URL%/}/rest/v1/settings?select=key&limit=1"
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' --max-time 20 \
+              "$url" -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY") || code=000
+            echo "Percobaan $attempt -> HTTP $code"
+            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+              echo "OK: proyek Supabase aktif."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Gagal menghubungi Supabase (HTTP $code). Cek SUPABASE_URL/SUPABASE_ANON_KEY, atau proyek mungkin sedang dijeda."
+          cat /tmp/resp.txt || true
+          exit 1

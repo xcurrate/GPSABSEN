@@ -62,6 +62,22 @@ Aplikasi ini menggunakan [Supabase](https://supabase.com) sebagai backend untuk 
     - Atur environment variables `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` di Netlify.
 7.  **Jalankan Lokal**: Buka `index.html` di browser Anda.
 
+## Menghindari Jeda Proyek Supabase (Free Plan)
+
+Supabase **Free Plan** otomatis menjeda proyek yang tidak ada aktivitas database selama 7 hari (mis. saat libur panjang). Proyek yang dijeda bisa dipulihkan dalam 90 hari, tetapi lebih baik dicegah.
+
+Repo ini menyertakan workflow `.github/workflows/keepalive.yml` yang mengirim beberapa request ringan ke REST API setiap hari (4x sehari) agar proyek tetap dianggap aktif. Workflow ini tidak mengubah data apa pun.
+
+**Cara mengaktifkan:**
+
+1. Buka **Settings > Secrets and variables > Actions** di repo GitHub.
+2. Tambahkan dua *repository secret*:
+   - `SUPABASE_URL` — URL proyek, mis. `https://xxxx.supabase.co` (sama dengan yang ada di `js/supabase.js`).
+   - `SUPABASE_ANON_KEY` — `anon (public) key` proyek.
+3. Workflow berjalan otomatis sesuai jadwal, dan bisa diuji manual lewat tab **Actions > Supabase Keep-Alive > Run workflow**.
+
+> Cukup gunakan `anon key`. Jangan pernah menyimpan `service_role key` di secrets GitHub untuk workflow ini.
+
 ## Kontribusi
 
 Kontribusi dalam bentuk apapun sangat diterima! Jika Anda menemukan bug atau memiliki ide untuk fitur baru, silakan buat *issue* atau *pull request*.
