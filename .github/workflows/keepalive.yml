@@ -32,9 +32,14 @@ jobs:
     steps:
       - name: Validasi & ping database
         run: |
-          # Bersihkan spasi/newline yang mungkin ikut ter-paste, dan normalkan skema.
-          url=$(printf '%s' "${SUPABASE_URL:-}" | tr -d '[:space:]')
-          key=$(printf '%s' "${SUPABASE_ANON_KEY:-}" | tr -d '[:space:]')
+          # Bersihkan spasi/newline dan tanda kutip yang mungkin ikut ter-paste.
+          clean() { printf '%s' "$1" | tr -d '[:space:]' | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"; }
+          url=$(clean "${SUPABASE_URL:-}")
+          key=$(clean "${SUPABASE_ANON_KEY:-}")
+          key=${key#Bearer }
+          key=${key#bearer }
+          key=${key#Bearer}
+          key=${key#bearer}
 
           if [ -z "$url" ]; then echo "::error::SUPABASE_URL belum diset (Secrets atau Variables)."; exit 1; fi
           if [ -z "$key" ]; then echo "::error::SUPABASE_ANON_KEY belum diset (Secrets atau Variables)."; exit 1; fi
@@ -51,6 +56,17 @@ jobs:
           fi
           echo "Menghubungi: $url"
 
+          # Diagnostik kunci (tanpa membocorkan isi): panjang + awalan.
+          prefix=$(printf '%s' "$key" | cut -c1-14)
+          echo "Panjang SUPABASE_ANON_KEY: ${#key} karakter (awalan: ${prefix}...)"
+          if printf '%s' "$key" | grep -qE '^eyJ'; then
+            echo "Format kunci: JWT (anon/service_role legacy)."
+          elif printf '%s' "$key" | grep -qE '^sb_publishable_'; then
+            echo "Format kunci: publishable key (baru)."
+          else
+            echo "::warning::Format SUPABASE_ANON_KEY tidak dikenali. Seharusnya diawali 'eyJ' (JWT) atau 'sb_publishable_'."
+          fi
+
           endpoint="$url/rest/v1/settings?select=key&limit=1"
           for attempt in 1 2 3; do
             code=$(curl -sS -o /tmp/resp.txt -w '%{http_code}' --max-time 20 \
@@ -59,6 +75,11 @@ jobs:
             if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
               echo "OK: proyek Supabase aktif."
               exit 0
+            fi
+            if [ "$code" = "401" ]; then
+              echo "::error::HTTP 401 = SUPABASE_ANON_KEY salah/tidak cocok dengan proyek. Salin ulang 'anon public' key dari Project Settings > API (pastikan tidak tertukar dengan service_role atau proyek lain)."
+              cat /tmp/resp.txt || true
+              exit 1
             fi
             sleep 5
           done
