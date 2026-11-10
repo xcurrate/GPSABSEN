@@ -40,3 +40,16 @@ Logika bersama ada di `js/supabase.js` (klien Supabase + helper: `getTodayStr`, 
 ## Verifikasi
 
 Tidak ada tooling build. Untuk menguji: buka `index.html` di browser dengan koneksi Supabase aktif, atau jalankan static server sederhana (mis. `python3 -m http.server`).
+
+## Status Database (per 2026-11-10)
+
+Proyek Supabase aktif: ref `sbxtfqidotarniglzban` (region ap-southeast-2). Database ini juga dipakai aplikasi lain (tabel `creators`, `game_stats`, `shopping_list`, `transactions`, `votes`, `weekly_periods`, dll) — **hati-hati saat menjalankan SQL yang memengaruhi `public` secara global**.
+
+Migrasi yang sudah diterapkan (dijalankan lewat MCP Supabase, di luar `sql/*.sql`):
+
+- `hardening_server_side_attendance` — menambahkan RPC `check_in`/`check_out`/`update_my_profile`, memperketat policy `attendance` (guru tidak boleh insert/update langsung), dan mengembalikan `handle_new_user` ke versi yang selalu menetapkan role `'guru'`.
+- `enable_rls_leave_requests` — mengaktifkan RLS pada `leave_requests` (sebelumnya mati) + 4 policy sesuai `schema.sql`, dan mencabut EXECUTE `anon` pada fungsi absensi/profil.
+
+Pelajaran: `sql/hardening.sql` di repo adalah sumber kebenaran, tetapi **tidak dijalankan otomatis** — setelah mengubah SQL, jalankan migrasi ke proyek Supabase dan verifikasi lewat `pg_proc`/`pg_policies`, karena frontend bisa sudah memanggil RPC yang belum ada di database (gejala: *"Could not find the function ... in the schema cache"*).
+
+Fitur profil: `update_my_profile` sudah ada di DB tetapi belum dipanggil frontend (belum ada UI edit profil guru).
